@@ -6,9 +6,9 @@ generator client {
 }
 
 datasource db {
-  provider  = "sqlite"  // Change to "postgresql" for Supabase
+  provider  = "postgresql"
   url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_DATABASE_URL")  // For Supabase connection pooling
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 enum UserRole {
