@@ -1,0 +1,270 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  FACULTY
+  STAFF
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum RequestType {
+  GMC
+  UER
+  CDC
+  CAC
+}
+
+enum RequestStatus {
+  NEW
+  PROCESSING
+  ISSUED
+  HOLD
+  REJECTED
+}
+
+enum ComplaintCategory {
+  MAJOR
+  MINOR
+  OTHER
+}
+
+enum ComplaintStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+  REOPENED
+}
+
+enum TemplateType {
+  CERTIFICATE
+  EMAIL
+}
+
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  password      String
+  name          String?
+  role          UserRole    @default(STAFF)
+  status        UserStatus  @default(ACTIVE)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  lastLoginAt   DateTime?
+  
+  // Relations
+  requests      Request[]
+  complaints    Complaint[]
+  announcements Announcement[]
+  auditLogs     AuditLog[]
+  templates     Template[]
+}
+
+model Profile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  fullName        String?
+  givenName       String?
+  surname         String?
+  middleName      String?
+  extensionName   String?
+  email           String   @unique
+  studentNumber   String?
+  collegeInstitute String?
+  yearLevel       String?
+  sex             String?
+  course          String?
+  phone           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Request {
+  id                    String        @id @default(cuid())
+  controlNumber         String        @unique
+  requestType           RequestType
+  status                RequestStatus @default(NEW)
+  
+  // Requestor info (anonymous, no account required)
+  requestorFirstName    String
+  requestorMiddleName   String?
+  requestorLastName     String
+  requestorExtensionName String?
+  requestorEmail        String
+  requestorPhone        String?
+  requestorStudentNo    String
+  requestorCollege      String
+  requestorCourse       String?
+  requestorYearLevel    String?
+  requestorSex          String?
+  
+  // Classification (for GMC)
+  classification        String?  // Currently Enrolled, Graduate, Non-Completer
+  yearGraduated         String?
+  
+  // Purpose
+  purpose               String
+  otherPurpose          String?
+  
+  // Type-specific fields (JSON)
+  additionalData        String?  // JSON for UER, CDC, CAC specific fields
+  
+  // Documents
+  documents             String?  // JSON array of file paths
+  
+  // Processing
+  remarks               String?
+  processedBy           String?
+  processedAt           DateTime?
+  
+  // Certificate
+  certificateUrl        String?
+  certificateIssuedAt   DateTime?
+  certificateExpiresAt  DateTime?
+  
+  // Tracking
+  trackingToken         String        @unique
+  qrCode                String?       @unique
+  
+  // Email sent tracking
+  emailSentAt           DateTime?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  processor             User?         @relation(fields: [processedBy], references: [id])
+}
+
+model Complaint {
+  id              String          @id @default(cuid())
+  controlNumber   String          @unique
+  complainants    String          // JSON array
+  respondents     String          // JSON array
+  category        ComplaintCategory?
+  complaintType   String?
+  status          ComplaintStatus @default(PENDING)
+  
+  subject         String
+  description     String
+  dateOfIncident  String?
+  location        String?
+  isOngoing       Boolean         @default(false)
+  howOften        String?
+  witnesses       String?         // JSON array
+  previousReports String?
+  
+  documents       String?         // JSON array
+  
+  // Processing
+  remarks         String?
+  processedBy     String?
+  processedAt     DateTime?
+  
+  // Tracking
+  trackingToken   String          @unique
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  processor       User?           @relation(fields: [processedBy], references: [id])
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  isPinned    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  postedFrom  DateTime
+  postedTo    DateTime?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  author      User     @relation(fields: [createdBy], references: [id])
+}
+
+model Template {
+  id            String       @id @default(cuid())
+  name          String
+  templateType  TemplateType
+  filename      String?
+  storagePath   String?
+  placeholders  String?      // JSON configuration
+  subject       String?      // For email templates
+  bodyHtml      String?      // For email templates
+  isActive      Boolean      @default(true)
+  createdBy     String
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  
+  author        User         @relation(fields: [createdBy], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  userName    String?
+  action      String
+  module      String
+  recordId    String?
+  oldValue    String?  // JSON
+  newValue    String?  // JSON
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id])
+}
+
+model CmsContent {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  label       String
+  value       String
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+}
+
+model ManagedList {
+  id          String   @id @default(cuid())
+  listType    String   // college, purpose, complaint_type, violation
+  label       String
+  value       String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+model OfficeHours {
+  id          String   @id @default(cuid())
+  dayOfWeek   Int      // 0=Sunday, 1=Monday, etc.
+  openTime    String
+  closeTime   String
+  isOpen      Boolean  @default(true)
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
