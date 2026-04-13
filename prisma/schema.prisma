@@ -9,6 +9,8 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_DATABASE_URL")
+  // Fallback for Turbopack development
+  // url       = "postgresql://postgres.nqbswodpygegaqdzjokr:T7VBtBFB5ska1Tnz@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"
 }
 
 enum UserRole {

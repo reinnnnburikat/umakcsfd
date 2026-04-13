@@ -59,7 +59,7 @@ const purposes = [
   { value: "Other", label: "Other (Please specify)" },
 ];
 
-// Classification options with requirements
+// Classification options with requirements (based on official CSFD Google Form)
 const classificationOptions = [
   {
     label: "Currently Enrolled",
@@ -67,13 +67,11 @@ const classificationOptions = [
     description: "Currently enrolled at UMAK (HSU or Undergraduate)",
     color: "#000B3C",
     requirements: [
-      "Certificate of Registration (COR) - Current Semester",
-      "Valid School ID",
-      "Letter of Request addressed to CSFD Director",
+      "Certificate of Registration (COR) or Report Card (Form 138) - Latest complete and clear copy",
     ],
+    documentLabel: "COR or Report Card (Form 138)",
     questions: [
-      { id: "yearLevel", label: "Year Level", type: "select", options: ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"], required: true },
-      { id: "semester", label: "Current Semester", type: "select", options: ["1st Semester", "2nd Semester", "Summer"], required: true },
+      { id: "yearLevel", label: "Year/Grade Level", type: "select", options: ["Grade 11", "Grade 12", "First year level", "Second year level", "Third year level", "Fourth year level", "Fifth year level"], required: true },
     ],
   },
   {
@@ -82,30 +80,26 @@ const classificationOptions = [
     description: "Graduate at UMAK (HSU/College/Graduate Studies Program)",
     color: "#1F9E55",
     requirements: [
-      "Certificate of Graduation or Diploma (photocopy)",
-      "Valid Government-issued ID",
-      "Letter of Request addressed to CSFD Director",
+      "Diploma or Transcript of Records (TOR) - Complete and clear copy",
     ],
+    documentLabel: "Diploma or TOR",
     questions: [
       { id: "yearGraduated", label: "Year Graduated", type: "text", placeholder: "e.g., 2023", required: true },
-      { id: "programCompleted", label: "Program Completed", type: "text", placeholder: "e.g., Bachelor of Science in Computer Science", required: true },
+      { id: "programCompleted", label: "Degree Name/Title", type: "text", placeholder: "e.g., Bachelor of Science in Computer Science", required: true },
     ],
   },
   {
-    label: "Non-Completer",
-    value: "Non-Completer",
-    description: "Former/Previous student at UMAK who did not complete the program",
+    label: "Former Student",
+    value: "Former Student",
+    description: "Former/Previous student of the University of Makati",
     color: "#ffc400",
     textColor: "#111c4e",
     requirements: [
-      "Certificate of Registration (COR) - Last Semester Attended",
-      "Valid Government-issued ID",
-      "Letter of Request addressed to CSFD Director stating reason for non-completion",
+      "COR, Report Card (Form 138), TOR, Certificate of Honorable Dismissal, or any official academic record/proof of previous enrolment at UMak",
     ],
+    documentLabel: "COR, Form 138, TOR, or Honorable Dismissal",
     questions: [
-      { id: "lastYearAttended", label: "Last Year Attended", type: "text", placeholder: "e.g., 2020", required: true },
-      { id: "lastSemester", label: "Last Semester Attended", type: "select", options: ["1st Semester", "2nd Semester", "Summer"], required: true },
-      { id: "reasonForLeaving", label: "Reason for Leaving", type: "textarea", placeholder: "Brief explanation...", required: true },
+      { id: "lastYearAttended", label: "Last Level/Year Attended", type: "text", placeholder: "e.g., 3rd year or 2023", required: true },
     ],
   },
 ];
@@ -147,6 +141,8 @@ interface UploadedDocument {
   size: number;
   file: File;
   preview?: string;
+  url?: string; // Server URL after upload
+  uploaded?: boolean;
 }
 
 export default function GMCRequestPage() {
@@ -259,11 +255,7 @@ export default function GMCRequestPage() {
       case "semester":
         return formData.classification === "Currently Enrolled" && !value.trim() ? "Semester is required" : "";
       case "lastYearAttended":
-        return formData.classification === "Non-Completer" && !value.trim() ? "Last year attended is required" : "";
-      case "lastSemester":
-        return formData.classification === "Non-Completer" && !value.trim() ? "Last semester is required" : "";
-      case "reasonForLeaving":
-        return formData.classification === "Non-Completer" && !value.trim() ? "Reason for leaving is required" : "";
+        return formData.classification === "Former Student" && !value.trim() ? "Last year/level attended is required" : "";
       default:
         return "";
     }
@@ -292,24 +284,24 @@ export default function GMCRequestPage() {
   };
 
   // Document upload handlers
-  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
     setIsUploading(true);
-    
-    Array.from(files).forEach(file => {
+
+    for (const file of Array.from(files)) {
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
       if (!allowedTypes.includes(file.type)) {
         toast.error(`Invalid file type: ${file.name}. Only JPG, PNG, GIF, and PDF are allowed.`);
-        return;
+        continue;
       }
 
       // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`File too large: ${file.name}. Maximum size is 5MB.`);
-        return;
+        continue;
       }
 
       const newDoc: UploadedDocument = {
@@ -318,6 +310,7 @@ export default function GMCRequestPage() {
         type: file.type,
         size: file.size,
         file: file,
+        uploaded: false,
       };
 
       // Create preview for images
@@ -331,7 +324,37 @@ export default function GMCRequestPage() {
       } else {
         setUploadedDocuments(prev => [...prev, newDoc]);
       }
-    });
+
+      // Upload file to server immediately
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
+
+        const uploadResponse = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        const uploadResult = await uploadResponse.json();
+
+        if (uploadResult.success) {
+          // Update document with server URL
+          setUploadedDocuments(prev =>
+            prev.map(doc =>
+              doc.id === newDoc.id
+                ? { ...doc, url: uploadResult.data.url, uploaded: true }
+                : doc
+            )
+          );
+          toast.success(`${file.name} uploaded successfully`);
+        } else {
+          toast.error(`Failed to upload ${file.name}: ${uploadResult.error}`);
+        }
+      } catch (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast.error(`Failed to upload ${file.name}. Please try again.`);
+      }
+    }
 
     setIsUploading(false);
     // Reset input
@@ -414,7 +437,7 @@ export default function GMCRequestPage() {
     // Validate all steps
     const step1Valid = validateStep1();
     const step2Valid = validateStep2();
-    
+
     if (!step1Valid || !step2Valid) {
       toast.error("Please fill in all required fields correctly");
       return;
@@ -427,12 +450,30 @@ export default function GMCRequestPage() {
       return;
     }
 
+    // Check if documents are still uploading
+    if (isUploading) {
+      toast.error("Please wait for document uploads to complete");
+      return;
+    }
+
+    // Collect uploaded document URLs
+    const documentUrls = uploadedDocuments
+      .filter(doc => doc.uploaded && doc.url)
+      .map(doc => ({
+        name: doc.name,
+        url: doc.url,
+        type: doc.type,
+        size: doc.size,
+      }));
+
     setIsSubmitting(true);
     console.log("Submitting GMC request with data:", {
       requestType: "GMC",
       purpose: finalPurpose,
       classification: formData.classification,
+      documents: documentUrls,
     });
+
     try {
       const response = await fetch("/api/requests", {
         method: "POST",
@@ -459,10 +500,12 @@ export default function GMCRequestPage() {
             lastSemester: formData.lastSemester,
             reasonForLeaving: formData.reasonForLeaving,
           },
+          documents: documentUrls,
         }),
       });
 
       const data = await response.json();
+      console.log("API Response:", data);
 
       if (data.success) {
         // Clear draft on success
@@ -898,10 +941,25 @@ export default function GMCRequestPage() {
               Upload Required Documents
             </h3>
             <p className="text-sm text-gray-500">
-              Upload the required documents based on your classification
+              {currentClassification?.documentLabel || "Upload your supporting documents"}
             </p>
           </div>
         </div>
+
+        {/* Classification-specific Requirements */}
+        {currentClassification && (
+          <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
+            <h4 className="font-semibold text-amber-800 mb-2">Required Document(s):</h4>
+            <ul className="space-y-1">
+              {currentClassification.requirements.map((req, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-amber-700">
+                  <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{req}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Upload Area */}
         <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#ffc400] transition-colors">
@@ -912,14 +970,19 @@ export default function GMCRequestPage() {
             accept="image/jpeg,image/png,image/gif,application/pdf"
             onChange={handleDocumentUpload}
             className="hidden"
+            disabled={isUploading}
           />
           <label
             htmlFor="document-upload"
-            className="cursor-pointer"
+            className={`cursor-pointer ${isUploading ? 'opacity-50' : ''}`}
           >
-            <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            {isUploading ? (
+              <Loader2 className="w-12 h-12 mx-auto text-[#111c4e] mb-4 animate-spin" />
+            ) : (
+              <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            )}
             <p className="text-gray-600 font-medium mb-2">
-              Click to upload or drag and drop
+              {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
             </p>
             <p className="text-sm text-gray-400">
               JPG, PNG, GIF, or PDF (max 5MB each)
@@ -950,13 +1013,20 @@ export default function GMCRequestPage() {
                     <FileText className="w-6 h-6 text-red-500" />
                   </div>
                 )}
-                
+
                 {/* File Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{doc.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate">{doc.name}</p>
+                    {doc.uploaded ? (
+                      <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">Uploaded</span>
+                    ) : (
+                      <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">Uploading...</span>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-500">{formatFileSize(doc.size)}</p>
                 </div>
-                
+
                 {/* Remove Button */}
                 <button
                   type="button"
@@ -973,7 +1043,7 @@ export default function GMCRequestPage() {
         {/* Note */}
         <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
           <p className="text-xs text-blue-700">
-            <strong>Note:</strong> You can upload documents now or submit your request and upload them later through the tracking page. Make sure to upload the required documents based on your classification.
+            <strong>Note:</strong> Please upload a complete and clear copy of your document. This will help speed up the processing of your request.
           </p>
         </div>
       </div>
