@@ -140,28 +140,32 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send confirmation email (async, don't wait for it)
+    // Send confirmation email
     const requestorFullName = `${requestorFirstName} ${requestorMiddleName ? requestorMiddleName + ' ' : ''}${requestorLastName}${requestorExtensionName ? ' ' + requestorExtensionName : ''}`;
     const requestTypeName = getRequestTypeDisplayName(requestType);
     
-    // Send email in background (don't block the response)
-    sendRequestConfirmationEmail(requestorEmail, {
+    // Send email and wait for result
+    const emailResult = await sendRequestConfirmationEmail(requestorEmail, {
       controlNumber,
       requestType: requestTypeName,
       requestorName: requestorFullName,
       trackingToken,
       estimatedDays: getRequestTypeEstimatedDays(requestType),
-    }).then(result => {
-      if (result.success) {
-        // Update email sent timestamp
-        db.request.update({
+    });
+    
+    if (emailResult.success) {
+      // Update email sent timestamp
+      try {
+        await db.request.update({
           where: { id: newRequest.id },
           data: { emailSentAt: new Date() },
-        }).catch(err => console.error("Failed to update emailSentAt:", err));
+        });
+      } catch (err) {
+        console.error("Failed to update emailSentAt:", err);
       }
-    }).catch(err => {
-      console.error("Failed to send confirmation email:", err);
-    });
+    } else {
+      console.error("Failed to send confirmation email:", emailResult.error);
+    }
 
     // Notify admins about the new request (async, don't wait)
     notifyAdminsNewRequest(controlNumber, requestTypeName, requestorFullName)

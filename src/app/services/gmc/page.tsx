@@ -1315,10 +1315,11 @@ export default function GMCRequestPage() {
               <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-green-600"></div>
 
               {[
-                "Fill out the Good Moral Certificate request form with your personal and academic information.",
-                "Upload the required supporting document based on your classification (COR, Report Card, Diploma, TOR, or Honorable Dismissal).",
-                "Wait for the processing of your request. You will receive a notification via email once it's ready.",
-                "Claim your Good Moral Certificate from the CSFD office or download it from the portal once processed.",
+                "Submit your Good Moral Certificate request through our online portal.",
+                "Wait for your request to be validated by the CSFD office.",
+                "Receive the digital copy of your Good Moral Certificate via email.",
+                "Print your desired number of copies.",
+                "Proceed to the CSFD office for authentication (dry seal).",
               ].map((text, index) => (
                 <motion.div
                   key={index}
