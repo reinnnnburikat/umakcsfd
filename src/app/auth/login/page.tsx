@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -19,7 +19,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { User, Lock, Loader2, AlertCircle } from "lucide-react";
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard/staff";
@@ -70,6 +70,104 @@ export default function LoginPage() {
   };
 
   return (
+    <form onSubmit={handleSubmit}>
+      <CardContent className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <div className="relative">
+            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-10"
+              required
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-10"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end">
+          <Link
+            href="/auth/forgot-password"
+            className="text-sm text-orange-500 hover:text-orange-600"
+          >
+            Forgot password?
+          </Link>
+        </div>
+      </CardContent>
+      
+      <CardFooter className="flex flex-col gap-4">
+        <Button
+          type="submit"
+          className="w-full bg-orange-500 hover:bg-orange-600"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Signing in...
+            </>
+          ) : (
+            "Sign In"
+          )}
+        </Button>
+        
+        <div className="text-center text-sm text-muted-foreground">
+          <Link
+            href="/"
+            className="text-orange-500 hover:text-orange-600"
+          >
+            ← Back to Home
+          </Link>
+        </div>
+      </CardFooter>
+    </form>
+  );
+}
+
+function LoginFormSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div className="h-4 w-12 bg-muted rounded animate-pulse" />
+        <div className="h-10 w-full bg-muted rounded animate-pulse" />
+      </div>
+      <div className="space-y-2">
+        <div className="h-4 w-16 bg-muted rounded animate-pulse" />
+        <div className="h-10 w-full bg-muted rounded animate-pulse" />
+      </div>
+      <div className="h-10 w-full bg-muted rounded animate-pulse" />
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <div className="min-h-screen flex">
       {/* Left Side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 text-white p-12 flex-col justify-between relative overflow-hidden">
@@ -115,83 +213,9 @@ export default function LoginPage() {
                 Enter your credentials to access your account
               </CardDescription>
             </CardHeader>
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-                
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end">
-                  <Link
-                    href="/auth/forgot-password"
-                    className="text-sm text-orange-500 hover:text-orange-600"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-              </CardContent>
-              
-              <CardFooter className="flex flex-col gap-4">
-                <Button
-                  type="submit"
-                  className="w-full bg-orange-500 hover:bg-orange-600"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-                
-                <div className="text-center text-sm text-muted-foreground">
-                  <Link
-                    href="/"
-                    className="text-orange-500 hover:text-orange-600"
-                  >
-                    ← Back to Home
-                  </Link>
-                </div>
-              </CardFooter>
-            </form>
+            <Suspense fallback={<LoginFormSkeleton />}>
+              <LoginFormContent />
+            </Suspense>
           </Card>
         </div>
 
