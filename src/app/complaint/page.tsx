@@ -2,36 +2,11 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  Loader2,
-  Upload,
-  FileText,
-  Clock,
-  Info,
-  UserPlus,
-  UserMinus,
-  AlertTriangle,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 const colleges = [
   "College of Business and Financial Management",
@@ -70,122 +45,89 @@ const complaintTypes = [
   "Other",
 ];
 
-const steps = [
-  { id: 1, title: "Complainant Information" },
-  { id: 2, title: "Respondent Information" },
-  { id: 3, title: "Incident Details" },
-  { id: 4, title: "Review & Submit" },
+const categoryOptions = [
+  {
+    label: "Major Offense",
+    value: "Major",
+    description: "Serious violations that may result in suspension or expulsion.",
+    color: "#dc2626",
+  },
+  {
+    label: "Minor Offense",
+    value: "Minor",
+    description: "Less serious violations that may result in warning or community service.",
+    color: "#f97316",
+  },
 ];
-
-interface Person {
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  extensionName: string;
-  sex: string;
-  studentNumber: string;
-  email: string;
-  phone: string;
-  college: string;
-  course: string;
-  yearLevel: string;
-}
-
-const emptyPerson: Person = {
-  firstName: "",
-  middleName: "",
-  lastName: "",
-  extensionName: "",
-  sex: "",
-  studentNumber: "",
-  email: "",
-  phone: "",
-  college: "",
-  course: "",
-  yearLevel: "",
-};
 
 export default function ComplaintPage() {
   const router = useRouter();
+  const [page, setPage] = useState<"process" | "form" | "success">("process");
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
   const [controlNumber, setControlNumber] = useState("");
   const [trackingToken, setTrackingToken] = useState("");
 
-  const [complainants, setComplainants] = useState<Person[]>([{ ...emptyPerson }]);
-  const [respondents, setRespondents] = useState<Person[]>([{ ...emptyPerson }]);
-
   const [formData, setFormData] = useState({
+    // Complainant Information
+    givenName: "",
+    surname: "",
+    middleName: "",
+    extensionName: "",
+    sex: "",
+    studentNumber: "",
+    college: "",
+    email: "",
+    phone: "",
+    // Complaint Details
     complaintType: "",
+    category: "",
     subject: "",
     description: "",
     dateOfIncident: "",
     location: "",
-    isOngoing: false,
-    howOften: "",
-    witnesses: "",
-    previousReports: "",
+    // Respondent Information
+    respondentName: "",
+    respondentStudentNumber: "",
+    respondentCollege: "",
   });
 
-  const [documents, setDocuments] = useState<File[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleFormChange = (field: string, value: string | boolean) => {
+  const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handlePersonChange = (
-    type: "complainant" | "respondent",
-    index: number,
-    field: string,
-    value: string
-  ) => {
-    const setter = type === "complainant" ? setComplainants : setRespondents;
-    setter((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
-  };
-
-  const addPerson = (type: "complainant" | "respondent") => {
-    const setter = type === "complainant" ? setComplainants : setRespondents;
-    setter((prev) => [...prev, { ...emptyPerson }]);
-  };
-
-  const removePerson = (type: "complainant" | "respondent", index: number) => {
-    const setter = type === "complainant" ? setComplainants : setRespondents;
-    setter((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      const validFiles = files.filter((file) => file.size <= 100 * 1024 * 1024); // 100MB for complaints
-      if (validFiles.length !== files.length) {
-        toast.error("Some files were skipped (max 100MB per file)");
-      }
-      setDocuments((prev) => [...prev, ...validFiles]);
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
-  const removeDocument = (index: number) => {
-    setDocuments((prev) => prev.filter((_, i) => i !== index));
+  const validateStep1 = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.givenName.trim()) newErrors.givenName = "Given name is required";
+    if (!formData.surname.trim()) newErrors.surname = "Surname is required";
+    if (!formData.sex) newErrors.sex = "Sex is required";
+    if (!formData.studentNumber.trim()) newErrors.studentNumber = "Student number is required";
+    if (!formData.college) newErrors.college = "College/Institute is required";
+    if (!formData.email.trim()) newErrors.email = "Email is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const canProceed = () => {
-    switch (currentStep) {
-      case 1:
-        return complainants[0].firstName && complainants[0].lastName && complainants[0].email;
-      case 2:
-        return respondents[0].firstName && respondents[0].lastName;
-      case 3:
-        return formData.complaintType && formData.subject && formData.description;
-      case 4:
-        return true;
-      default:
-        return false;
-    }
+  const validateStep2 = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.complaintType) newErrors.complaintType = "Complaint type is required";
+    if (!formData.category) newErrors.category = "Category is required";
+    if (!formData.subject.trim()) newErrors.subject = "Subject is required";
+    if (!formData.description.trim()) newErrors.description = "Description is required";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNextStep = () => {
+    if (currentStep === 1 && !validateStep1()) return;
+    if (currentStep === 2 && !validateStep2()) return;
+    setCurrentStep(currentStep + 1);
   };
 
   const handleSubmit = async () => {
@@ -194,12 +136,7 @@ export default function ComplaintPage() {
       const response = await fetch("/api/complaints", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          complainants,
-          respondents,
-          ...formData,
-          documents: documents.map((d) => d.name),
-        }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -207,7 +144,7 @@ export default function ComplaintPage() {
       if (data.success) {
         setControlNumber(data.data.controlNumber);
         setTrackingToken(data.data.trackingToken);
-        setSubmitted(true);
+        setPage("success");
         toast.success("Complaint submitted successfully!");
       } else {
         toast.error(data.error || "Failed to submit complaint");
@@ -220,605 +157,715 @@ export default function ComplaintPage() {
     }
   };
 
-  const PersonForm = ({
-    type,
-    person,
-    index,
-    canRemove,
-  }: {
-    type: "complainant" | "respondent";
-    person: Person;
-    index: number;
-    canRemove: boolean;
-  }) => (
-    <Card className={index > 0 ? "mt-4 border-l-4 border-l-orange-500" : ""}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm">
-            {index === 0 ? `Main ${type === "complainant" ? "Complainant" : "Respondent"}` : `Co-${type === "complainant" ? "Complainant" : "Respondent"} ${index}`}
-          </CardTitle>
-          {canRemove && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-red-500 hover:text-red-600"
-              onClick={() => removePerson(type, index)}
-            >
-              <UserMinus className="h-4 w-4 mr-1" />
-              Remove
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>First Name *</Label>
-          <Input
-            value={person.firstName}
-            onChange={(e) => handlePersonChange(type, index, "firstName", e.target.value)}
-            placeholder="First name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Middle Name</Label>
-          <Input
-            value={person.middleName}
-            onChange={(e) => handlePersonChange(type, index, "middleName", e.target.value)}
-            placeholder="Middle name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Last Name *</Label>
-          <Input
-            value={person.lastName}
-            onChange={(e) => handlePersonChange(type, index, "lastName", e.target.value)}
-            placeholder="Last name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Extension Name</Label>
-          <Input
-            value={person.extensionName}
-            onChange={(e) => handlePersonChange(type, index, "extensionName", e.target.value)}
-            placeholder="Jr., Sr., III"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Sex</Label>
-          <Select
-            value={person.sex}
-            onValueChange={(v) => handlePersonChange(type, index, "sex", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select sex" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Male">Male</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Student Number</Label>
-          <Input
-            value={person.studentNumber}
-            onChange={(e) => handlePersonChange(type, index, "studentNumber", e.target.value)}
-            placeholder="e.g., 2020-00000"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Email {type === "complainant" && index === 0 ? "*" : ""}</Label>
-          <Input
-            type="email"
-            value={person.email}
-            onChange={(e) => handlePersonChange(type, index, "email", e.target.value)}
-            placeholder="email@example.com"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Phone</Label>
-          <Input
-            value={person.phone}
-            onChange={(e) => handlePersonChange(type, index, "phone", e.target.value)}
-            placeholder="09XX XXX XXXX"
-          />
-        </div>
-        <div className="sm:col-span-2 space-y-2">
-          <Label>College/Institute</Label>
-          <Select
-            value={person.college}
-            onValueChange={(v) => handlePersonChange(type, index, "college", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select college/institute" />
-            </SelectTrigger>
-            <SelectContent>
-              {colleges.map((college) => (
-                <SelectItem key={college} value={college}>
-                  {college}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label>Course/Program</Label>
-          <Input
-            value={person.course}
-            onChange={(e) => handlePersonChange(type, index, "course", e.target.value)}
-            placeholder="e.g., BS Computer Science"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Year Level</Label>
-          <Select
-            value={person.yearLevel}
-            onValueChange={(v) => handlePersonChange(type, index, "yearLevel", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select year level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Grade 11">Grade 11</SelectItem>
-              <SelectItem value="Grade 12">Grade 12</SelectItem>
-              <SelectItem value="First Year">First Year</SelectItem>
-              <SelectItem value="Second Year">Second Year</SelectItem>
-              <SelectItem value="Third Year">Third Year</SelectItem>
-              <SelectItem value="Fourth Year">Fourth Year</SelectItem>
-              <SelectItem value="Fifth Year">Fifth Year</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  if (submitted) {
+  // Success Page
+  if (page === "success") {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gray-100">
         <PublicNavbar />
         <main className="flex-1 container mx-auto px-4 py-16">
-          <Card className="max-w-2xl mx-auto text-center">
-            <CardContent className="p-12">
-              <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mx-auto mb-6">
-                <Check className="h-10 w-10 text-green-600" />
-              </div>
-              <h1 className="text-2xl font-bold mb-2">Complaint Filed!</h1>
-              <p className="text-muted-foreground mb-6">
-                Please wait for CSFD Staff to evaluate your complaint.
+          <div className="max-w-md mx-auto text-center">
+            <div className="mb-8">
+              <Image
+                src="/icons/thankyoucheck.png"
+                alt="Success"
+                width={120}
+                height={120}
+                className="mx-auto"
+              />
+            </div>
+            <h1
+              className="text-3xl font-black mb-4"
+              style={{ color: "#111c4e", fontFamily: "Metropolis, sans-serif" }}
+            >
+              THANK YOU!
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Your complaint has been submitted successfully.
+            </p>
+            <div
+              className="rounded-xl p-6 mb-6"
+              style={{ backgroundColor: "#000B3C" }}
+            >
+              <p className="text-white text-sm mb-2">Your Control Number</p>
+              <p
+                className="text-3xl font-mono font-bold"
+                style={{ color: "#ffc400" }}
+              >
+                {controlNumber}
               </p>
-              <div className="bg-muted rounded-lg p-6 mb-6">
-                <div className="text-sm text-muted-foreground mb-1">Control Number</div>
-                <div className="text-2xl font-mono font-bold text-orange-500">
-                  {controlNumber}
-                </div>
-              </div>
-              <Alert className="mb-6">
-                <Info className="h-4 w-4" />
-                <AlertDescription>
-                  Please save your control number to track your complaint status.
-                  A confirmation email has been sent.
-                </AlertDescription>
-              </Alert>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button variant="outline" onClick={() => router.push("/track")}>
-                  Track Complaint
-                </Button>
-                <Button onClick={() => router.push("/")}>Back to Home</Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+            <p className="text-sm text-gray-600 mb-8">
+              Please save your control number. You can use it to track your complaint status.
+              A confirmation email has been sent to {formData.email}.
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                className="px-8 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#111c4e", color: "white" }}
+                onClick={() => router.push("/track")}
+              >
+                Track Complaint
+              </button>
+              <button
+                className="px-8 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#1F9E55", color: "white" }}
+                onClick={() => router.push("/")}
+              >
+                Back to Home
+              </button>
+            </div>
+          </div>
         </main>
         <PublicFooter />
       </div>
     );
   }
 
+  // Process Page
+  if (page === "process") {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-100">
+        <PublicNavbar />
+
+        <section className="px-6 md:px-12 py-12 md:py-16">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h1
+                className="text-3xl md:text-4xl font-black mb-2"
+                style={{ color: "#3d3d3d", fontFamily: "Metropolis, sans-serif" }}
+              >
+                PROCESS FOR FILING
+              </h1>
+              <h2
+                className="text-2xl md:text-3xl font-black"
+                style={{ color: "#ffc400", fontFamily: "Metropolis, sans-serif" }}
+              >
+                STUDENT COMPLAINT
+              </h2>
+            </div>
+
+            <div className="relative">
+              <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-green-600"></div>
+
+              {[
+                {
+                  title: "Accomplish Form",
+                  description: "Fill out the complaint form with accurate and complete information about the incident.",
+                },
+                {
+                  title: "Wait for Validation",
+                  description: "CSFD staff will review and validate your complaint submission.",
+                },
+                {
+                  title: "Proceed to CSFD",
+                  description: "Once validated, you will be notified to proceed to the CSFD office for further processing.",
+                },
+                {
+                  title: "Wait for Case Hearing",
+                  description: "Your case will be scheduled for hearing. You will be notified of the schedule.",
+                },
+              ].map((step, index) => (
+                <div key={index} className="flex gap-6 mb-8 relative items-center last:mb-0">
+                  <div
+                    className="w-12 h-12 rounded-lg bg-green-600 flex items-center justify-center flex-shrink-0 z-10"
+                  >
+                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-lg p-6 flex-1">
+                    <h3 className="text-lg md:text-xl font-bold mb-2" style={{ color: "#111c4e" }}>
+                      Step {index + 1}: {step.title}
+                    </h3>
+                    <p className="text-gray-700 text-sm md:text-base">{step.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-center gap-6 mt-12">
+              <button
+                className="px-8 py-3 rounded-lg font-medium text-lg hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#dc2626", color: "white" }}
+                onClick={() => router.push("/services")}
+              >
+                Cancel
+              </button>
+              <button
+                className="px-8 py-3 rounded-lg font-medium text-lg hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#1F9E55", color: "white" }}
+                onClick={() => setPage("form")}
+              >
+                Proceed
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <PublicFooter />
+      </div>
+    );
+  }
+
+  // Form Page
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gray-100">
       <PublicNavbar />
 
-      <main className="flex-1 container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-lg bg-red-500/10 flex items-center justify-center">
-              <AlertTriangle className="h-6 w-6 text-red-500" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">File a Complaint</h1>
-              <p className="text-muted-foreground">
-                Report incidents or file complaints related to student conduct
-              </p>
-            </div>
+      <section className="px-6 md:px-12 py-8 md:py-12">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8 md:mb-12">
+            <h1
+              className="text-2xl md:text-4xl font-black mb-2"
+              style={{ color: "#3d3d3d", fontFamily: "Metropolis, sans-serif" }}
+            >
+              {currentStep === 1 ? "COMPLAINANT" : currentStep === 2 ? "COMPLAINT" : currentStep === 3 ? "RESPONDENT" : "SUMMARY"}
+            </h1>
+            <h2
+              className="text-xl md:text-3xl font-black"
+              style={{ color: "#ffc400", fontFamily: "Metropolis, sans-serif" }}
+            >
+              {currentStep === 1 ? "INFORMATION" : currentStep === 2 ? "DETAILS" : currentStep === 3 ? "INFORMATION" : "REVIEW"}
+            </h2>
           </div>
 
-          {/* Office Hours Banner */}
-          <Alert className="mb-6 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
-            <Clock className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200">
-              <span className="font-semibold">Note:</span> Complaint submissions are accepted 24/7.
-              Processing is done during office hours (Mon-Fri, 8AM-5PM).
-            </AlertDescription>
-          </Alert>
-
-          {/* Stepper */}
-          <div className="flex items-center justify-center mb-8">
-            {steps.map((step, index) => (
-              <React.Fragment key={step.id}>
-                <div className="flex flex-col items-center">
-                  <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
-                      currentStep > step.id
-                        ? "bg-green-500 text-white"
-                        : currentStep === step.id
-                        ? "bg-red-500 text-white"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {currentStep > step.id ? <Check className="h-5 w-5" /> : step.id}
-                  </div>
-                  <span className="text-xs mt-1 text-center hidden sm:block">{step.title}</span>
-                </div>
-                {index < steps.length - 1 && (
-                  <div
-                    className={`h-0.5 w-12 sm:w-24 mx-2 transition-colors ${
-                      currentStep > step.id ? "bg-green-500" : "bg-muted"
-                    }`}
+          {/* Step 1: Complainant Information */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    GIVEN NAME<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter your given name"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: errors.givenName ? "#dc2626" : "#111c4e" }}
+                    value={formData.givenName}
+                    onChange={(e) => handleInputChange("givenName", e.target.value)}
                   />
-                )}
-              </React.Fragment>
-            ))}
-          </div>
-
-          {/* Form Card */}
-          <Card>
-            <CardContent className="p-6">
-              {/* Step 1: Complainant Information */}
-              {currentStep === 1 && (
+                  {errors.givenName && <p className="text-red-500 text-sm mt-1">{errors.givenName}</p>}
+                </div>
                 <div>
-                  <h2 className="text-lg font-semibold mb-4">Complainant Information</h2>
-                  {complainants.map((person, index) => (
-                    <PersonForm
-                      key={index}
-                      type="complainant"
-                      person={person}
-                      index={index}
-                      canRemove={complainants.length > 1}
-                    />
-                  ))}
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => addPerson("complainant")}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Co-Complainant
-                  </Button>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    SURNAME<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter your surname"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: errors.surname ? "#dc2626" : "#111c4e" }}
+                    value={formData.surname}
+                    onChange={(e) => handleInputChange("surname", e.target.value)}
+                  />
+                  {errors.surname && <p className="text-red-500 text-sm mt-1">{errors.surname}</p>}
                 </div>
-              )}
-
-              {/* Step 2: Respondent Information */}
-              {currentStep === 2 && (
                 <div>
-                  <h2 className="text-lg font-semibold mb-4">Respondent Information</h2>
-                  {respondents.map((person, index) => (
-                    <PersonForm
-                      key={index}
-                      type="respondent"
-                      person={person}
-                      index={index}
-                      canRemove={respondents.length > 1}
-                    />
-                  ))}
-                  <Button
-                    variant="outline"
-                    className="mt-4"
-                    onClick={() => addPerson("respondent")}
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Co-Respondent
-                  </Button>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    MIDDLE NAME
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter your middle name"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: "#111c4e" }}
+                    value={formData.middleName}
+                    onChange={(e) => handleInputChange("middleName", e.target.value)}
+                  />
                 </div>
-              )}
-
-              {/* Step 3: Incident Details */}
-              {currentStep === 3 && (
-                <div className="space-y-6">
-                  <h2 className="text-lg font-semibold">Incident Details</h2>
-
-                  <div className="space-y-2">
-                    <Label>Complaint Type *</Label>
-                    <Select
-                      value={formData.complaintType}
-                      onValueChange={(v) => handleFormChange("complaintType", v)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select complaint type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {complaintTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Subject *</Label>
-                    <Input
-                      value={formData.subject}
-                      onChange={(e) => handleFormChange("subject", e.target.value)}
-                      placeholder="Brief subject/title of the complaint"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Detailed Description *</Label>
-                    <Textarea
-                      value={formData.description}
-                      onChange={(e) => handleFormChange("description", e.target.value)}
-                      placeholder="Provide a detailed description of the incident..."
-                      rows={5}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Date of Incident</Label>
-                      <Input
-                        type="date"
-                        value={formData.dateOfIncident}
-                        onChange={(e) => handleFormChange("dateOfIncident", e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Location</Label>
-                      <Input
-                        value={formData.location}
-                        onChange={(e) => handleFormChange("location", e.target.value)}
-                        placeholder="Where did the incident occur?"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                    <div>
-                      <Label>Is this an ongoing issue?</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Check if the incident is still happening
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formData.isOngoing}
-                      onChange={(e) => handleFormChange("isOngoing", e.target.checked)}
-                      className="w-5 h-5 rounded"
-                    />
-                  </div>
-
-                  {formData.isOngoing && (
-                    <div className="space-y-2">
-                      <Label>How often does this occur?</Label>
-                      <Input
-                        value={formData.howOften}
-                        onChange={(e) => handleFormChange("howOften", e.target.value)}
-                        placeholder="e.g., Daily, Weekly, Occasionally"
-                      />
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label>Witnesses</Label>
-                    <Textarea
-                      value={formData.witnesses}
-                      onChange={(e) => handleFormChange("witnesses", e.target.value)}
-                      placeholder="List any witnesses (names, contact info if available)"
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Previous Reports</Label>
-                    <Textarea
-                      value={formData.previousReports}
-                      onChange={(e) => handleFormChange("previousReports", e.target.value)}
-                      placeholder="Has this been reported before? If yes, provide details..."
-                      rows={2}
-                    />
-                  </div>
-
-                  {/* File Upload */}
-                  <div>
-                    <Label className="mb-2 block">Supporting Documents</Label>
-                    <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                      <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Upload evidence (PDF, images, videos - max 100MB each)
-                      </p>
-                      <Input
-                        type="file"
-                        multiple
-                        accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,.mp3,.wav,.doc,.docx"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="file-upload"
-                      />
-                      <Label htmlFor="file-upload" className="cursor-pointer">
-                        <Button variant="outline" asChild>
-                          <span>Browse Files</span>
-                        </Button>
-                      </Label>
-                    </div>
-
-                    {documents.length > 0 && (
-                      <div className="space-y-2 mt-4">
-                        {documents.map((doc, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                          >
-                            <div className="flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{doc.name}</span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-500"
-                              onClick={() => removeDocument(index)}
-                            >
-                              Remove
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Step 4: Review & Submit */}
-              {currentStep === 4 && (
-                <div className="space-y-6">
-                  <h2 className="text-lg font-semibold">Review Your Complaint</h2>
-
-                  {/* Complainants Summary */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Complainants</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {complainants.map((person, index) => (
-                        <div key={index} className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline">{index === 0 ? "Main" : `Co-${index}`}</Badge>
-                          <span>
-                            {person.firstName} {person.lastName}
-                            {person.studentNumber && ` (${person.studentNumber})`}
-                          </span>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  {/* Respondents Summary */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Respondents</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {respondents.map((person, index) => (
-                        <div key={index} className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline">{index === 0 ? "Main" : `Co-${index}`}</Badge>
-                          <span>
-                            {person.firstName} {person.lastName}
-                            {person.studentNumber && ` (${person.studentNumber})`}
-                          </span>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-
-                  {/* Complaint Details */}
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm">Complaint Details</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Type:</span>
-                        <span className="ml-2 font-medium">{formData.complaintType}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Date:</span>
-                        <span className="ml-2 font-medium">{formData.dateOfIncident || "Not specified"}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Location:</span>
-                        <span className="ml-2 font-medium">{formData.location || "Not specified"}</span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Ongoing:</span>
-                        <span className="ml-2 font-medium">{formData.isOngoing ? "Yes" : "No"}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-muted-foreground">Subject:</span>
-                        <span className="ml-2 font-medium">{formData.subject}</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="text-muted-foreground">Description:</span>
-                        <p className="mt-1 text-muted-foreground">{formData.description}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Documents */}
-                  {documents.length > 0 && (
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Attached Documents</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        {documents.map((doc, index) => (
-                          <div key={index} className="flex items-center gap-2 text-sm">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            {doc.name}
-                          </div>
-                        ))}
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-
-              {/* Navigation Buttons */}
-              <div className="flex justify-between mt-8 pt-4 border-t">
-                <Button
-                  variant="outline"
-                  onClick={() => setCurrentStep((prev) => prev - 1)}
-                  disabled={currentStep === 1}
-                >
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Previous
-                </Button>
-
-                {currentStep < 4 ? (
-                  <Button
-                    onClick={() => setCurrentStep((prev) => prev + 1)}
-                    disabled={!canProceed()}
-                    className="bg-red-500 hover:bg-red-600"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="bg-red-500 hover:bg-red-600"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        Submit Complaint
-                        <Check className="h-4 w-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                )}
               </div>
-            </CardContent>
-          </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    EXTENSION NAME
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Jr., Sr., III"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: "#111c4e" }}
+                    value={formData.extensionName}
+                    onChange={(e) => handleInputChange("extensionName", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    SEX<span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white"
+                    style={{ borderColor: errors.sex ? "#dc2626" : "#111c4e" }}
+                    value={formData.sex}
+                    onChange={(e) => handleInputChange("sex", e.target.value)}
+                  >
+                    <option value="">Select your sex</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                  {errors.sex && <p className="text-red-500 text-sm mt-1">{errors.sex}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    UMAK STUDENT NUMBER<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 2020-00000"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: errors.studentNumber ? "#dc2626" : "#111c4e" }}
+                    value={formData.studentNumber}
+                    onChange={(e) => handleInputChange("studentNumber", e.target.value)}
+                  />
+                  {errors.studentNumber && <p className="text-red-500 text-sm mt-1">{errors.studentNumber}</p>}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                  COLLEGE/INSTITUTE<span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white"
+                  style={{ borderColor: errors.college ? "#dc2626" : "#111c4e" }}
+                  value={formData.college}
+                  onChange={(e) => handleInputChange("college", e.target.value)}
+                >
+                  <option value="">Select your college/institute</option>
+                  {colleges.map((college) => (
+                    <option key={college} value={college}>{college}</option>
+                  ))}
+                </select>
+                {errors.college && <p className="text-red-500 text-sm mt-1">{errors.college}</p>}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    EMAIL ADDRESS<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="your.email@example.com"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: errors.email ? "#dc2626" : "#111c4e" }}
+                    value={formData.email}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
+                  />
+                  {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    PHONE NUMBER
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="09XX XXX XXXX"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: "#111c4e" }}
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Complaint Details */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    COMPLAINT TYPE<span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white"
+                    style={{ borderColor: errors.complaintType ? "#dc2626" : "#111c4e" }}
+                    value={formData.complaintType}
+                    onChange={(e) => handleInputChange("complaintType", e.target.value)}
+                  >
+                    <option value="">Select complaint type</option>
+                    {complaintTypes.map((type) => (
+                      <option key={type} value={type}>{type}</option>
+                    ))}
+                  </select>
+                  {errors.complaintType && <p className="text-red-500 text-sm mt-1">{errors.complaintType}</p>}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    CATEGORY<span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white"
+                    style={{ borderColor: errors.category ? "#dc2626" : "#111c4e" }}
+                    value={formData.category}
+                    onChange={(e) => handleInputChange("category", e.target.value)}
+                  >
+                    <option value="">Select category</option>
+                    <option value="Major">Major Offense</option>
+                    <option value="Minor">Minor Offense</option>
+                  </select>
+                  {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
+                </div>
+              </div>
+
+              {/* Category Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 flex items-start gap-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xl md:text-2xl font-bold">!</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-xs md:text-sm mb-1" style={{ color: "#111c4e" }}>REMINDER</h3>
+                    <p className="text-xs text-gray-600">Please select the appropriate category for your complaint.</p>
+                  </div>
+                </div>
+                {categoryOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    className="rounded-xl shadow-lg p-4 md:p-6 text-white cursor-pointer transition-all hover:scale-105"
+                    style={{ backgroundColor: option.color }}
+                    onClick={() => handleInputChange("category", option.value)}
+                  >
+                    <h3 className="font-bold text-xs md:text-sm mb-2">{option.label}</h3>
+                    <p className="text-xs opacity-80">{option.description}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                  SUBJECT<span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Brief subject/title of the complaint"
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                  style={{ borderColor: errors.subject ? "#dc2626" : "#111c4e" }}
+                  value={formData.subject}
+                  onChange={(e) => handleInputChange("subject", e.target.value)}
+                />
+                {errors.subject && <p className="text-red-500 text-sm mt-1">{errors.subject}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                  DESCRIPTION<span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  placeholder="Provide a detailed description of the incident..."
+                  rows={5}
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none resize-none"
+                  style={{ borderColor: errors.description ? "#dc2626" : "#111c4e" }}
+                  value={formData.description}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
+                />
+                {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    DATE OF INCIDENT
+                  </label>
+                  <input
+                    type="date"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white"
+                    style={{ borderColor: "#111c4e" }}
+                    value={formData.dateOfIncident}
+                    onChange={(e) => handleInputChange("dateOfIncident", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    LOCATION
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Where did the incident occur?"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: "#111c4e" }}
+                    value={formData.location}
+                    onChange={(e) => handleInputChange("location", e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Respondent Information */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 flex items-start gap-4 mb-6">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-bold text-xs md:text-sm mb-1" style={{ color: "#111c4e" }}>NOTE</h3>
+                  <p className="text-xs text-gray-600">Respondent information is optional. If you don't know the respondent's details, you may leave this section blank.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    RESPONDENT NAME
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter respondent's full name"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: "#111c4e" }}
+                    value={formData.respondentName}
+                    onChange={(e) => handleInputChange("respondentName", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                    RESPONDENT STUDENT NUMBER
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., 2020-00000"
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none"
+                    style={{ borderColor: "#111c4e" }}
+                    value={formData.respondentStudentNumber}
+                    onChange={(e) => handleInputChange("respondentStudentNumber", e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-2" style={{ color: "#111c4e" }}>
+                  RESPONDENT COLLEGE/INSTITUTE
+                </label>
+                <select
+                  className="w-full px-4 py-3 border-2 rounded-lg focus:outline-none bg-white"
+                  style={{ borderColor: "#111c4e" }}
+                  value={formData.respondentCollege}
+                  onChange={(e) => handleInputChange("respondentCollege", e.target.value)}
+                >
+                  <option value="">Select respondent's college/institute</option>
+                  {colleges.map((college) => (
+                    <option key={college} value={college}>{college}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Summary */}
+          {currentStep === 4 && (
+            <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+              <h3 className="text-lg font-bold mb-6" style={{ color: "#111c4e" }}>
+                Please review your information before submitting
+              </h3>
+
+              {/* Complainant Information */}
+              <div className="mb-6">
+                <h4 className="text-sm font-bold uppercase mb-3 pb-2 border-b" style={{ color: "#111c4e" }}>
+                  Complainant Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Given Name</p>
+                    <p className="font-medium">{formData.givenName}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Surname</p>
+                    <p className="font-medium">{formData.surname}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Middle Name</p>
+                    <p className="font-medium">{formData.middleName || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Extension Name</p>
+                    <p className="font-medium">{formData.extensionName || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Sex</p>
+                    <p className="font-medium">{formData.sex}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Student Number</p>
+                    <p className="font-medium">{formData.studentNumber}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600">College/Institute</p>
+                    <p className="font-medium">{formData.college}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="font-medium">{formData.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Phone</p>
+                    <p className="font-medium">{formData.phone || "-"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Complaint Details */}
+              <div className="mb-6">
+                <h4 className="text-sm font-bold uppercase mb-3 pb-2 border-b" style={{ color: "#111c4e" }}>
+                  Complaint Details
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Complaint Type</p>
+                    <p className="font-medium">{formData.complaintType}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Category</p>
+                    <p className="font-medium">{formData.category}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600">Subject</p>
+                    <p className="font-medium">{formData.subject}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600">Description</p>
+                    <p className="font-medium text-sm bg-gray-50 p-3 rounded-lg">{formData.description}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Date of Incident</p>
+                    <p className="font-medium">{formData.dateOfIncident || "Not specified"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Location</p>
+                    <p className="font-medium">{formData.location || "Not specified"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Respondent Information */}
+              <div>
+                <h4 className="text-sm font-bold uppercase mb-3 pb-2 border-b" style={{ color: "#111c4e" }}>
+                  Respondent Information
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Respondent Name</p>
+                    <p className="font-medium">{formData.respondentName || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Respondent Student Number</p>
+                    <p className="font-medium">{formData.respondentStudentNumber || "-"}</p>
+                  </div>
+                  <div className="md:col-span-2">
+                    <p className="text-sm text-gray-600">Respondent College/Institute</p>
+                    <p className="font-medium">{formData.respondentCollege || "-"}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-center gap-4 md:gap-6 mt-8 md:mt-12">
+            {currentStep > 1 && (
+              <button
+                className="px-6 md:px-8 py-3 rounded-lg font-medium text-base md:text-lg hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#2563eb", color: "white" }}
+                onClick={() => setCurrentStep(currentStep - 1)}
+              >
+                BACK
+              </button>
+            )}
+            <button
+              className="px-6 md:px-8 py-3 rounded-lg font-medium text-base md:text-lg hover:opacity-90 transition-opacity"
+              style={{ backgroundColor: "#dc2626", color: "white" }}
+              onClick={() => setShowCancelModal(true)}
+            >
+              CANCEL
+            </button>
+            {currentStep < 4 ? (
+              <button
+                className="px-6 md:px-8 py-3 rounded-lg font-medium text-base md:text-lg hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#1F9E55", color: "white" }}
+                onClick={handleNextStep}
+              >
+                PROCEED
+              </button>
+            ) : (
+              <button
+                className="px-6 md:px-8 py-3 rounded-lg font-medium text-base md:text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                style={{ backgroundColor: "#1F9E55", color: "white" }}
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    SUBMITTING...
+                  </span>
+                ) : (
+                  "SUBMIT COMPLAINT"
+                )}
+              </button>
+            )}
+          </div>
         </div>
-      </main>
+      </section>
 
       <PublicFooter />
+
+      {/* Cancel Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div
+            className="rounded-xl shadow-2xl p-6 md:p-8 max-w-md w-full"
+            style={{ backgroundColor: "#000B3C" }}
+          >
+            <div className="flex justify-center mb-6">
+              <Image
+                src="/icons/line-md_file-cancel-filled.png"
+                alt="Cancel"
+                width={96}
+                height={96}
+                className="w-20 h-20 md:w-24 md:h-24 object-contain"
+              />
+            </div>
+            <div className="text-center mb-4">
+              <h3
+                className="text-xl md:text-2xl font-black text-white"
+                style={{ fontFamily: "Metropolis, sans-serif" }}
+              >
+                Are you sure you want to cancel?
+              </h3>
+            </div>
+            <div className="text-center mb-8">
+              <p className="text-white text-sm md:text-base">
+                Upon cancelling, the complaint will not be saved.
+              </p>
+            </div>
+            <div className="flex justify-center gap-4 md:gap-6">
+              <button
+                className="px-8 md:px-12 py-3 rounded-lg font-bold text-base md:text-lg hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#dc2626", color: "white" }}
+                onClick={() => {
+                  setShowCancelModal(false);
+                  router.push("/services");
+                }}
+              >
+                YES
+              </button>
+              <button
+                className="px-8 md:px-12 py-3 rounded-lg font-bold text-base md:text-lg hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#1F9E55", color: "white" }}
+                onClick={() => setShowCancelModal(false)}
+              >
+                NO
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
