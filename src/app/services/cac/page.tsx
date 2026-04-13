@@ -1,14 +1,17 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
 import { toast } from "sonner";
-import { Check, User, FileText, ClipboardCheck, Baby, Users } from "lucide-react";
+import { Check, User, FileText, ClipboardCheck, Baby, Users, Save } from "lucide-react";
 import { WizardForm, WizardStep, FloatingLabelInput, FloatingLabelSelect, ValidationFeedback } from "@/components/ui/wizard-form";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Local storage key for auto-save
+const CAC_FORM_STORAGE_KEY = "cac_form_draft";
 
 const colleges = [
   { value: "College of Business and Financial Management", label: "College of Business and Financial Management" },
@@ -49,6 +52,30 @@ const relationshipOptions = [
   { value: "Other", label: "Other" },
 ];
 
+// Default form data
+const defaultFormData = {
+  // Parent/Guardian Information
+  givenName: "",
+  surname: "",
+  middleName: "",
+  extensionName: "",
+  sex: "",
+  studentNumber: "",
+  college: "",
+  otherCollege: "",
+  email: "",
+  phone: "",
+  // Child Information
+  childName: "",
+  childAge: "",
+  childBirthday: "",
+  childGrade: "",
+  currentSchool: "",
+  relationship: "",
+  otherRelationship: "",
+  reasonForBringing: "",
+};
+
 export default function CACRequestPage() {
   const router = useRouter();
   const [page, setPage] = useState<"process" | "form" | "success">("process");
@@ -57,32 +84,67 @@ export default function CACRequestPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [controlNumber, setControlNumber] = useState("");
   const [trackingToken, setTrackingToken] = useState("");
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
 
-  const [formData, setFormData] = useState({
-    // Parent/Guardian Information
-    givenName: "",
-    surname: "",
-    middleName: "",
-    extensionName: "",
-    sex: "",
-    studentNumber: "",
-    college: "",
-    otherCollege: "",
-    email: "",
-    phone: "",
-    // Child Information
-    childName: "",
-    childAge: "",
-    childBirthday: "",
-    childGrade: "",
-    currentSchool: "",
-    relationship: "",
-    otherRelationship: "",
-    reasonForBringing: "",
-  });
+  const [formData, setFormData] = useState(defaultFormData);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(CAC_FORM_STORAGE_KEY);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.formData && Object.keys(parsed.formData).length > 0) {
+          setFormData(parsed.formData);
+          setLastSaved(new Date(parsed.timestamp));
+          setHasRestoredDraft(true);
+          toast.success("Draft restored! Your previous form data has been loaded.", {
+            duration: 5000,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading draft:", error);
+    }
+  }, []);
+
+  // Auto-save to localStorage
+  const saveDraft = useCallback(() => {
+    try {
+      const draftData = {
+        formData,
+        timestamp: new Date().toISOString(),
+      };
+      localStorage.setItem(CAC_FORM_STORAGE_KEY, JSON.stringify(draftData));
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error("Error saving draft:", error);
+    }
+  }, [formData]);
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Object.values(formData).some(v => v.trim())) {
+        saveDraft();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [formData, saveDraft]);
+
+  // Clear draft after successful submission
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(CAC_FORM_STORAGE_KEY);
+    } catch (error) {
+      console.error("Error clearing draft:", error);
+    }
+  }, []);
 
   // Auto-format student number: first letter uppercase, rest alphanumeric
   const formatStudentNumber = (value: string): string => {
@@ -246,6 +308,7 @@ export default function CACRequestPage() {
       const data = await response.json();
 
       if (data.success) {
+        clearDraft();
         setControlNumber(data.data.controlNumber);
         setTrackingToken(data.data.trackingToken);
         setPage("success");
@@ -314,6 +377,14 @@ export default function CACRequestPage() {
       exit={{ opacity: 0, y: -20 }}
       className="space-y-6"
     >
+      {/* Auto-save indicator */}
+      {lastSaved && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 justify-end">
+          <Save className="w-4 h-4" />
+          <span>Draft auto-saved at {lastSaved.toLocaleTimeString()}</span>
+        </div>
+      )}
+
       {/* Personal Information */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h3 className="text-lg font-bold mb-6 flex items-center gap-2" style={{ color: "#111c4e" }}>
@@ -753,6 +824,9 @@ export default function CACRequestPage() {
 
   // Handle step change with validation
   const handleStepChange = (step: number) => {
+    // Save draft when moving between steps
+    saveDraft();
+
     if (step > currentStep) {
       // Moving forward - validate current step
       if (currentStep === 0 && !validateStep1()) {
@@ -836,7 +910,7 @@ export default function CACRequestPage() {
               <button
                 className="px-8 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
                 style={{ backgroundColor: "#111c4e", color: "white" }}
-                onClick={() => router.push("/track")}
+                onClick={() => router.push(`/track?token=${trackingToken}`)}
               >
                 Track Request
               </button>

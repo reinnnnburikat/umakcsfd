@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
 import { motion } from "framer-motion";
@@ -13,6 +14,7 @@ import {
   Twitter,
   Instagram,
   MessageCircle,
+  User,
 } from "lucide-react";
 
 const contactInfo = {
@@ -35,6 +37,27 @@ const contactInfo = {
     { day: "Saturday - Sunday", time: "Closed" },
   ],
 };
+
+const staffMembers = [
+  {
+    name: "POMPEYO C. ADAMOS III",
+    role: "DIRECTOR",
+    image: "/images/staff/OFFICIAL PORTRAIT.jpg",
+    description: "Associate Professor Pompeyo C. Adamos III, Director, Center for Student Formation & Discipline",
+  },
+  {
+    name: "MARIA FE SAMARES-ROXAS",
+    role: "DISCIPLINE PROGRAM COORDINATOR",
+    image: "/images/staff/SAMARES.jpg",
+    description: "Discipline Program Coordinator",
+  },
+  {
+    name: "ALMA A. FRAGINAL",
+    role: "FORMATION PROGRAM COORDINATOR",
+    image: "/images/staff/ALMA FRAGINAL.png",
+    description: "Formation Program Coordinator",
+  },
+];
 
 const socialLinks = [
   { label: "Facebook", href: "https://facebook.com/UMakCSFD", icon: Facebook },
@@ -73,6 +96,60 @@ export default function ContactPage() {
                 We&apos;re here to help. Reach out to us through any of the channels below.
               </p>
             </motion.div>
+          </div>
+        </section>
+
+        {/* Staff Section */}
+        <section className="py-12 md:py-16 bg-gradient-to-b from-background to-gray-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center mb-10"
+            >
+              <h2 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: "#111c4e" }}>
+                Our <span style={{ color: "#ffc400" }}>Team</span>
+              </h2>
+              <p className="text-muted-foreground">
+                Meet the dedicated staff of the Center for Student Formation & Discipline
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+              {staffMembers.map((staff, index) => (
+                <motion.div
+                  key={staff.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="bg-white rounded-2xl shadow-lg overflow-hidden border border-border hover:border-[#ffc400]/50 transition-all hover:shadow-xl"
+                >
+                  <div className="relative h-64 bg-gradient-to-b from-[#111c4e] to-[#0a1229]">
+                    <Image
+                      src={staff.image}
+                      alt={staff.name}
+                      fill
+                      className="object-cover object-top"
+                    />
+                  </div>
+                  <div className="p-6 text-center">
+                    <span 
+                      className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-3"
+                      style={{ backgroundColor: "#ffc400", color: "#111c4e" }}
+                    >
+                      {staff.role}
+                    </span>
+                    <h3 className="text-lg font-bold mb-1" style={{ color: "#111c4e" }}>
+                      {staff.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {staff.description}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </section>
 
