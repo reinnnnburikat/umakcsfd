@@ -60,16 +60,15 @@ const purposes = [
 ];
 
 // Classification options with requirements (based on official CSFD Google Form)
+// Each classification requires only ONE document
 const classificationOptions = [
   {
     label: "Currently Enrolled",
     value: "Currently Enrolled",
     description: "Currently enrolled at UMAK (HSU or Undergraduate)",
     color: "#000B3C",
-    requirements: [
-      "Certificate of Registration (COR) or Report Card (Form 138) - Latest complete and clear copy",
-    ],
-    documentLabel: "COR or Report Card (Form 138)",
+    requirementLabel: "Certificate of Registration (COR) or Report Card (Form 138)",
+    requirementDescription: "Please upload a latest complete and clear copy of either your Certificate of Registration (COR) or Report Card (Form 138)",
     questions: [
       { id: "yearLevel", label: "Year/Grade Level", type: "select", options: ["Grade 11", "Grade 12", "First year level", "Second year level", "Third year level", "Fourth year level", "Fifth year level"], required: true },
     ],
@@ -79,10 +78,8 @@ const classificationOptions = [
     value: "Graduate",
     description: "Graduate at UMAK (HSU/College/Graduate Studies Program)",
     color: "#1F9E55",
-    requirements: [
-      "Diploma or Transcript of Records (TOR) - Complete and clear copy",
-    ],
-    documentLabel: "Diploma or TOR",
+    requirementLabel: "Diploma or Transcript of Records (TOR)",
+    requirementDescription: "Please upload a complete and clear copy of either your Diploma or Transcript of Records (TOR)",
     questions: [
       { id: "yearGraduated", label: "Year Graduated", type: "text", placeholder: "e.g., 2023", required: true },
       { id: "programCompleted", label: "Degree Name/Title", type: "text", placeholder: "e.g., Bachelor of Science in Computer Science", required: true },
@@ -94,10 +91,8 @@ const classificationOptions = [
     description: "Former/Previous student of the University of Makati",
     color: "#ffc400",
     textColor: "#111c4e",
-    requirements: [
-      "COR, Report Card (Form 138), TOR, Certificate of Honorable Dismissal, or any official academic record/proof of previous enrolment at UMak",
-    ],
-    documentLabel: "COR, Form 138, TOR, or Honorable Dismissal",
+    requirementLabel: "COR, Form 138, TOR, or Certificate of Honorable Dismissal",
+    requirementDescription: "Please upload a latest complete and clear copy of either your COR, Report Card (Form 138), TOR, Certificate of Honorable Dismissal or any official academic record/proof of previous enrolment at UMak",
     questions: [
       { id: "lastYearAttended", label: "Last Level/Year Attended", type: "text", placeholder: "e.g., 3rd year or 2023", required: true },
     ],
@@ -283,77 +278,85 @@ export default function GMCRequestPage() {
     setErrors((prev) => ({ ...prev, [field]: error }));
   };
 
-  // Document upload handlers
+  // Document upload handlers - Only ONE file allowed
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // If there's already a document, replace it
+    if (uploadedDocuments.length >= 1) {
+      toast.info("Replacing previous document...");
+      setUploadedDocuments([]);
+    }
 
     setIsUploading(true);
 
-    for (const file of Array.from(files)) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(`Invalid file type: ${file.name}. Only JPG, PNG, GIF, and PDF are allowed.`);
-        continue;
-      }
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(`Invalid file type: ${file.name}. Only JPG, PNG, GIF, and PDF are allowed.`);
+      setIsUploading(false);
+      e.target.value = '';
+      return;
+    }
 
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`File too large: ${file.name}. Maximum size is 5MB.`);
-        continue;
-      }
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(`File too large: ${file.name}. Maximum size is 5MB.`);
+      setIsUploading(false);
+      e.target.value = '';
+      return;
+    }
 
-      const newDoc: UploadedDocument = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        file: file,
-        uploaded: false,
+    const newDoc: UploadedDocument = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      file: file,
+      uploaded: false,
+    };
+
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        newDoc.preview = e.target?.result as string;
+        setUploadedDocuments([newDoc]);
       };
+      reader.readAsDataURL(file);
+    } else {
+      setUploadedDocuments([newDoc]);
+    }
 
-      // Create preview for images
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          newDoc.preview = e.target?.result as string;
-          setUploadedDocuments(prev => [...prev, newDoc]);
-        };
-        reader.readAsDataURL(file);
+    // Upload file to server immediately
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      const uploadResult = await uploadResponse.json();
+
+      if (uploadResult.success) {
+        // Update document with server URL
+        setUploadedDocuments(prev =>
+          prev.map(doc =>
+            doc.id === newDoc.id
+              ? { ...doc, url: uploadResult.data.url, uploaded: true }
+              : doc
+          )
+        );
+        toast.success(`${file.name} uploaded successfully`);
       } else {
-        setUploadedDocuments(prev => [...prev, newDoc]);
+        toast.error(`Failed to upload ${file.name}: ${uploadResult.error}`);
       }
-
-      // Upload file to server immediately
-      try {
-        const uploadFormData = new FormData();
-        uploadFormData.append('file', file);
-
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: uploadFormData,
-        });
-
-        const uploadResult = await uploadResponse.json();
-
-        if (uploadResult.success) {
-          // Update document with server URL
-          setUploadedDocuments(prev =>
-            prev.map(doc =>
-              doc.id === newDoc.id
-                ? { ...doc, url: uploadResult.data.url, uploaded: true }
-                : doc
-            )
-          );
-          toast.success(`${file.name} uploaded successfully`);
-        } else {
-          toast.error(`Failed to upload ${file.name}: ${uploadResult.error}`);
-        }
-      } catch (uploadError) {
-        console.error('Upload error:', uploadError);
-        toast.error(`Failed to upload ${file.name}. Please try again.`);
-      }
+    } catch (uploadError) {
+      console.error('Upload error:', uploadError);
+      toast.error(`Failed to upload ${file.name}. Please try again.`);
     }
 
     setIsUploading(false);
@@ -507,7 +510,7 @@ export default function GMCRequestPage() {
       const data = await response.json();
       console.log("API Response:", data);
 
-      if (data.success) {
+      if (response.ok && data.success) {
         // Clear draft on success
         clearDraft();
         setControlNumber(data.data.controlNumber);
@@ -516,11 +519,18 @@ export default function GMCRequestPage() {
         toast.success("Request submitted successfully!");
       } else {
         console.error("API Error:", data.error);
-        toast.error(data.error || "Failed to submit request. Please try again.");
+        // Show more specific error message
+        const errorMessage = data.error || (response.status === 500 ? "Server error. Please try again later." : "Failed to submit request. Please check your information and try again.");
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error("Error submitting request:", error);
-      toast.error("Failed to submit request. Please check your connection and try again.");
+      // Check if it's a network error
+      if (error instanceof TypeError && error.message.includes("fetch")) {
+        toast.error("Unable to connect to server. Please check your internet connection.");
+      } else {
+        toast.error("Failed to submit request. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -938,10 +948,10 @@ export default function GMCRequestPage() {
           </div>
           <div>
             <h3 className="text-lg font-bold" style={{ color: "#111c4e" }}>
-              Upload Required Documents
+              REQUIREMENT/S
             </h3>
             <p className="text-sm text-gray-500">
-              {currentClassification?.documentLabel || "Upload your supporting documents"}
+              Upload your supporting document
             </p>
           </div>
         </div>
@@ -949,57 +959,55 @@ export default function GMCRequestPage() {
         {/* Classification-specific Requirements */}
         {currentClassification && (
           <div className="mb-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
-            <h4 className="font-semibold text-amber-800 mb-2">Required Document(s):</h4>
-            <ul className="space-y-1">
-              {currentClassification.requirements.map((req, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-amber-700">
-                  <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>{req}</span>
-                </li>
-              ))}
-            </ul>
+            <h4 className="font-semibold text-amber-800 mb-2">
+              {currentClassification.requirementLabel}
+            </h4>
+            <p className="text-sm text-amber-700">
+              {currentClassification.requirementDescription}
+            </p>
           </div>
         )}
 
-        {/* Upload Area */}
+        {/* Upload Area - Single file only */}
         <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#ffc400] transition-colors">
           <input
             type="file"
             id="document-upload"
-            multiple
             accept="image/jpeg,image/png,image/gif,application/pdf"
             onChange={handleDocumentUpload}
             className="hidden"
-            disabled={isUploading}
+            disabled={isUploading || uploadedDocuments.length >= 1}
           />
           <label
             htmlFor="document-upload"
-            className={`cursor-pointer ${isUploading ? 'opacity-50' : ''}`}
+            className={`cursor-pointer ${isUploading || uploadedDocuments.length >= 1 ? 'opacity-50 pointer-events-none' : ''}`}
           >
             {isUploading ? (
               <Loader2 className="w-12 h-12 mx-auto text-[#111c4e] mb-4 animate-spin" />
+            ) : uploadedDocuments.length >= 1 ? (
+              <Check className="w-12 h-12 mx-auto text-green-500 mb-4" />
             ) : (
               <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
             )}
             <p className="text-gray-600 font-medium mb-2">
-              {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
+              {uploadedDocuments.length >= 1 ? "Document uploaded" : isUploading ? "Uploading..." : "Click to upload"}
             </p>
             <p className="text-sm text-gray-400">
-              JPG, PNG, GIF, or PDF (max 5MB each)
+              JPG, PNG, GIF, or PDF (max 5MB)
             </p>
           </label>
         </div>
 
-        {/* Uploaded Documents List */}
+        {/* Uploaded Document */}
         {uploadedDocuments.length > 0 && (
           <div className="mt-6 space-y-3">
             <h4 className="font-semibold text-sm text-gray-700">
-              Uploaded Documents ({uploadedDocuments.length})
+              Uploaded Document
             </h4>
             {uploadedDocuments.map((doc) => (
               <div
                 key={doc.id}
-                className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                className="flex items-center gap-4 p-3 bg-green-50 rounded-lg border border-green-200"
               >
                 {/* Preview or Icon */}
                 {doc.preview ? (
@@ -1019,7 +1027,7 @@ export default function GMCRequestPage() {
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-sm truncate">{doc.name}</p>
                     {doc.uploaded ? (
-                      <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">Uploaded</span>
+                      <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded">✓ Uploaded</span>
                     ) : (
                       <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">Uploading...</span>
                     )}
@@ -1039,13 +1047,6 @@ export default function GMCRequestPage() {
             ))}
           </div>
         )}
-
-        {/* Note */}
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-          <p className="text-xs text-blue-700">
-            <strong>Note:</strong> Please upload a complete and clear copy of your document. This will help speed up the processing of your request.
-          </p>
-        </div>
       </div>
     </motion.div>
   );
