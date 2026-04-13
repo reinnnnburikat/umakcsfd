@@ -243,8 +243,8 @@ export function PublicNavbar() {
                 </div>
               )}
 
-              {/* Auth Button / User Menu */}
-              {status === "authenticated" && session?.user ? (
+              {/* Auth Button / User Menu - Only show when logged in */}
+              {status === "authenticated" && session?.user && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors">
@@ -295,14 +295,6 @@ export function PublicNavbar() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <Link href="/auth/login">
-                  <Button
-                    className="bg-gradient-to-r from-[#ffc400] to-[#ff8c00] text-[#111c4e] font-semibold hover:opacity-90 ml-2"
-                  >
-                    LOG IN
-                  </Button>
-                </Link>
               )}
             </nav>
 
@@ -433,9 +425,9 @@ export function PublicNavbar() {
             </div>
           </div>
 
-          {/* Auth Buttons */}
-          <div className="mt-6 pt-6 border-t border-white/10">
-            {status === "authenticated" && session?.user ? (
+          {/* Auth Buttons - Only show when logged in */}
+          {status === "authenticated" && session?.user && (
+            <div className="mt-6 pt-6 border-t border-white/10">
               <div className="space-y-2">
                 {/* Notifications in Mobile Menu */}
                 <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-white/5 border border-white/10 mb-3">
@@ -463,16 +455,8 @@ export function PublicNavbar() {
                   <span>Logout</span>
                 </button>
               </div>
-            ) : (
-              <Link href="/auth/login" onClick={() => setIsMenuOpen(false)}>
-                <Button
-                  className="w-full bg-gradient-to-r from-[#ffc400] to-[#ff8c00] text-[#111c4e] font-semibold"
-                >
-                  LOG IN
-                </Button>
-              </Link>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 

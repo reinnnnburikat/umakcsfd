@@ -103,6 +103,7 @@ export default function UERRequestPage() {
     sex: "",
     studentNumber: "",
     college: "",
+    otherCollege: "",
     course: "",
     yearLevel: "",
     email: "",
@@ -145,12 +146,14 @@ export default function UERRequestPage() {
         return !value ? "Sex is required" : "";
       case "studentNumber":
         if (!value.trim()) return "Student number is required";
-        if (!/^\d{4}-\d{5}$/.test(value.trim())) {
-          return "Format should be YYYY-00000";
+        if (!/^[A-Z][A-Za-z0-9]*$/.test(value.trim())) {
+          return "Student number must start with a capital letter followed by alphanumeric characters";
         }
         return "";
       case "college":
         return !value ? "College/Institute is required" : "";
+      case "otherCollege":
+        return formData.college === "Other" && !value.trim() ? "Please specify your college/institute" : "";
       case "email":
         if (!value.trim()) return "Email is required";
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
@@ -194,6 +197,15 @@ export default function UERRequestPage() {
         isValid = false;
       }
     });
+
+    // Check for other college
+    if (formData.college === "Other") {
+      const otherCollegeError = validateField("otherCollege", formData.otherCollege);
+      if (otherCollegeError) {
+        newErrors.otherCollege = otherCollegeError;
+        isValid = false;
+      }
+    }
 
     setErrors((prev) => ({ ...prev, ...newErrors }));
     return isValid;
@@ -242,7 +254,7 @@ export default function UERRequestPage() {
           requestorEmail: formData.email,
           requestorPhone: formData.phone,
           requestorStudentNo: formData.studentNumber,
-          requestorCollege: formData.college,
+          requestorCollege: formData.college === "Other" ? formData.otherCollege : formData.college,
           requestorSex: formData.sex,
           purpose: formData.typeOfRequest === "Other" ? formData.otherSpecify : formData.typeOfRequest,
           additionalData: JSON.stringify({
@@ -289,18 +301,21 @@ export default function UERRequestPage() {
 
   // Check if step 1 is complete
   const isStep1Complete = useMemo(() => {
+    const hasOtherCollege = formData.college !== "Other" || formData.otherCollege.trim();
     return (
       formData.givenName.trim() &&
       formData.surname.trim() &&
       formData.sex &&
       formData.studentNumber.trim() &&
       formData.college &&
+      hasOtherCollege &&
       formData.email.trim() &&
       !errors.givenName &&
       !errors.surname &&
       !errors.sex &&
       !errors.studentNumber &&
       !errors.college &&
+      !errors.otherCollege &&
       !errors.email
     );
   }, [formData, errors]);
@@ -382,7 +397,8 @@ export default function UERRequestPage() {
           </div>
           <div>
             <FloatingLabelInput
-              label="UMak Student Number (YYYY-00000)"
+              label="UMak Student Number"
+              placeholder="K12042427"
               required
               value={formData.studentNumber}
               onChange={(e) => handleInputChange("studentNumber", e.target.value)}
@@ -417,7 +433,29 @@ export default function UERRequestPage() {
               <ValidationFeedback isValid message="Selected" />
             )}
           </div>
-          
+
+          <AnimatePresence>
+            {formData.college === "Other" && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <FloatingLabelInput
+                  label="Please specify your College/Institute"
+                  required
+                  value={formData.otherCollege}
+                  onChange={(e) => handleInputChange("otherCollege", e.target.value)}
+                  onBlur={() => handleBlur("otherCollege")}
+                  error={touched.otherCollege ? errors.otherCollege : ""}
+                />
+                {touched.otherCollege && formData.otherCollege && !errors.otherCollege && (
+                  <ValidationFeedback isValid message="Looks good!" />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <FloatingLabelInput
               label="Course/Program"
@@ -764,7 +802,7 @@ export default function UERRequestPage() {
           </div>
           <div className="border-b border-gray-100 pb-3 md:col-span-2">
             <p className="text-sm text-gray-500">College/Institute</p>
-            <p className="font-medium text-[var(--csfd-navy)]">{formData.college}</p>
+            <p className="font-medium text-[var(--csfd-navy)]">{formData.college === "Other" ? formData.otherCollege : formData.college}</p>
           </div>
           <div className="border-b border-gray-100 pb-3">
             <p className="text-sm text-gray-500">Course</p>
