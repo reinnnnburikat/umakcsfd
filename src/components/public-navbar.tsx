@@ -144,7 +144,7 @@ export function PublicNavbar() {
               </div>
               <div className="hidden sm:flex flex-col">
                 <span className="text-white font-bold text-sm md:text-base tracking-wide group-hover:text-[#ffc400] transition-colors">
-                  iCSFD+
+                  CSFD
                 </span>
                 <span className="text-white/50 text-[10px] md:text-xs">
                   University of Makati
@@ -339,7 +339,7 @@ export function PublicNavbar() {
               height={32}
               className="w-8 h-8 rounded-full object-cover"
             />
-            <span className="font-bold text-white">iCSFD+</span>
+            <span className="font-bold text-white">CSFD</span>
           </div>
           <button
             className="p-2 hover:bg-white/10 rounded-lg transition-colors"

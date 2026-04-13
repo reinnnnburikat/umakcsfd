@@ -16,12 +16,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "iCSFD+ | Integrated CSFD Digital Management System",
+  title: "Center for Student Formation and Discipline | University of Makati",
   description: "Your digital gateway to student services at the University of Makati - Center for Student Formation and Discipline",
-  keywords: ["iCSFD+", "UMak", "CSFD", "Student Services", "Certificate Request", "University of Makati"],
+  keywords: ["CSFD", "UMak", "Student Services", "Certificate Request", "University of Makati", "Good Moral Certificate"],
   authors: [{ name: "University of Makati - CSFD" }],
   icons: {
-    icon: "/favicon.ico",
+    icon: "/logos/CSFD LOGO.png",
   },
 };
 

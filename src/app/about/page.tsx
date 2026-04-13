@@ -27,19 +27,27 @@ import {
 const staffMembers = [
   {
     id: 1,
-    name: "Mr. Pompeyo S. Maralit",
-    title: "CSFD Director",
+    name: "POMPEYO C. ADAMOS III",
+    title: "Director",
     description: "Leads the Center for Student Formation and Discipline with dedication to student development and character formation.",
-    image: "/staff/pompeyo-maralit.jpg",
-    placeholder: true,
+    image: "/images/staff/OFFICIAL PORTRAIT.jpg",
+    placeholder: false,
   },
   {
     id: 2,
-    name: "Ms. Samares C. Galindez",
-    title: "Administrative Officer",
-    description: "Manages administrative operations and ensures efficient delivery of student services.",
-    image: "/staff/samares-galindez.jpg",
-    placeholder: true,
+    name: "MARIA FE SAMARES-ROXAS",
+    title: "Discipline Program Coordinator",
+    description: "Manages discipline programs and ensures fair implementation of student conduct policies.",
+    image: "/images/staff/SAMARES.jpg",
+    placeholder: false,
+  },
+  {
+    id: 3,
+    name: "ALMA A. FRAGINAL",
+    title: "Formation Program Coordinator",
+    description: "Oversees student formation programs, workshops, and character development activities.",
+    image: "/images/staff/ALMA FRAGINAL.png",
+    placeholder: false,
   },
 ];
 
@@ -165,7 +173,7 @@ export default function AboutPage() {
                     character development.
                   </p>
                   <p className="text-muted-foreground leading-relaxed mt-4 text-base md:text-lg">
-                    Through our digital platform <strong>iCSFD+</strong>, we aim to provide 
+                    Through our digital platform, we aim to provide 
                     efficient, transparent, and accessible services to the UMAK community.
                   </p>
                 </CardContent>
@@ -251,7 +259,7 @@ export default function AboutPage() {
             </motion.div>
 
             {/* Leadership */}
-            <div className="grid md:grid-cols-2 gap-8 mb-12">
+            <div className="grid md:grid-cols-3 gap-8 mb-12">
               {staffMembers.map((staff, index) => (
                 <motion.div
                   key={staff.id}
@@ -259,45 +267,40 @@ export default function AboutPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.6 + index * 0.1 }}
                 >
-                  <Card className="overflow-hidden hover:shadow-xl transition-shadow border-2 hover:border-[#ffc400]/30">
+                  <Card className="overflow-hidden hover:shadow-xl transition-shadow border-2 hover:border-[#ffc400]/30 h-full">
                     <CardContent className="p-0">
-                      <div className="flex flex-col sm:flex-row">
+                      <div className="flex flex-col">
                         {/* Staff Photo */}
-                        <div className="sm:w-40 flex-shrink-0">
-                          <div
-                            className="h-48 sm:h-full w-full relative"
-                            style={{ backgroundColor: "#111c4e" }}
-                          >
-                            {staff.placeholder ? (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-center">
-                                  <div className="w-24 h-24 rounded-full bg-[#ffc400]/20 flex items-center justify-center mx-auto mb-2">
-                                    <span className="text-3xl font-bold text-[#ffc400]">
-                                      {staff.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                                    </span>
-                                  </div>
-                                  <span className="text-xs text-white/50">Photo coming soon</span>
+                        <div className="w-full h-64 relative" style={{ backgroundColor: "#111c4e" }}>
+                          {staff.placeholder ? (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center">
+                                <div className="w-24 h-24 rounded-full bg-[#ffc400]/20 flex items-center justify-center mx-auto mb-2">
+                                  <span className="text-3xl font-bold text-[#ffc400]">
+                                    {staff.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                  </span>
                                 </div>
+                                <span className="text-xs text-white/50">Photo coming soon</span>
                               </div>
-                            ) : (
-                              <Image
-                                src={staff.image}
-                                alt={staff.name}
-                                fill
-                                className="object-cover"
-                              />
-                            )}
-                          </div>
+                            </div>
+                          ) : (
+                            <Image
+                              src={staff.image}
+                              alt={staff.name}
+                              fill
+                              className="object-cover object-top"
+                            />
+                          )}
                         </div>
 
                         {/* Staff Info */}
-                        <div className="flex-1 p-6">
-                          <div className="flex items-start gap-2 mb-2">
+                        <div className="p-6 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-2">
                             {staff.title.includes("Director") && (
-                              <Award className="w-5 h-5 text-[#ffc400] mt-0.5 flex-shrink-0" />
+                              <Award className="w-5 h-5 text-[#ffc400] flex-shrink-0" />
                             )}
                             <h3
-                              className="text-lg md:text-xl font-bold"
+                              className="text-lg font-bold"
                               style={{ color: "#111c4e" }}
                             >
                               {staff.name}

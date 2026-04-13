@@ -139,6 +139,16 @@ const defaultFormData = {
   phone: "",
 };
 
+// Document upload interface
+interface UploadedDocument {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  file: File;
+  preview?: string;
+}
+
 export default function GMCRequestPage() {
   const router = useRouter();
   const [page, setPage] = useState<"process" | "form" | "success">("process");
@@ -154,6 +164,8 @@ export default function GMCRequestPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [uploadedDocuments, setUploadedDocuments] = useState<UploadedDocument[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Load draft from localStorage on mount
   useEffect(() => {
@@ -279,6 +291,63 @@ export default function GMCRequestPage() {
     setErrors((prev) => ({ ...prev, [field]: error }));
   };
 
+  // Document upload handlers
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    setIsUploading(true);
+    
+    Array.from(files).forEach(file => {
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`Invalid file type: ${file.name}. Only JPG, PNG, GIF, and PDF are allowed.`);
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`File too large: ${file.name}. Maximum size is 5MB.`);
+        return;
+      }
+
+      const newDoc: UploadedDocument = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        file: file,
+      };
+
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          newDoc.preview = e.target?.result as string;
+          setUploadedDocuments(prev => [...prev, newDoc]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setUploadedDocuments(prev => [...prev, newDoc]);
+      }
+    });
+
+    setIsUploading(false);
+    // Reset input
+    e.target.value = '';
+  };
+
+  const removeDocument = (docId: string) => {
+    setUploadedDocuments(prev => prev.filter(doc => doc.id !== docId));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
   // Validate step 1
   const validateStep1 = (): boolean => {
     const fields = ["givenName", "surname", "sex", "studentNumber", "college", "classification", "email"];
@@ -342,12 +411,28 @@ export default function GMCRequestPage() {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep1() || !validateStep2()) {
-      toast.error("Please fill in all required fields");
+    // Validate all steps
+    const step1Valid = validateStep1();
+    const step2Valid = validateStep2();
+    
+    if (!step1Valid || !step2Valid) {
+      toast.error("Please fill in all required fields correctly");
+      return;
+    }
+
+    // Final check for purpose
+    const finalPurpose = formData.purpose === "Other" ? formData.otherPurpose : formData.purpose;
+    if (!finalPurpose || !finalPurpose.trim()) {
+      toast.error("Please select or specify a purpose");
       return;
     }
 
     setIsSubmitting(true);
+    console.log("Submitting GMC request with data:", {
+      requestType: "GMC",
+      purpose: finalPurpose,
+      classification: formData.classification,
+    });
     try {
       const response = await fetch("/api/requests", {
         method: "POST",
@@ -387,6 +472,7 @@ export default function GMCRequestPage() {
         setPage("success");
         toast.success("Request submitted successfully!");
       } else {
+        console.error("API Error:", data.error);
         toast.error(data.error || "Failed to submit request. Please try again.");
       }
     } catch (error) {
@@ -524,7 +610,7 @@ export default function GMCRequestPage() {
           <div>
             <FloatingLabelInput
               label="UMak Student Number"
-              placeholder="e.g., K12042427"
+              placeholder="e.g., A12345678"
               required
               value={formData.studentNumber}
               onChange={(e) => handleInputChange("studentNumber", e.target.value)}
@@ -800,6 +886,97 @@ export default function GMCRequestPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Document Upload Section */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-[#111c4e] flex items-center justify-center">
+            <Upload className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold" style={{ color: "#111c4e" }}>
+              Upload Required Documents
+            </h3>
+            <p className="text-sm text-gray-500">
+              Upload the required documents based on your classification
+            </p>
+          </div>
+        </div>
+
+        {/* Upload Area */}
+        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-[#ffc400] transition-colors">
+          <input
+            type="file"
+            id="document-upload"
+            multiple
+            accept="image/jpeg,image/png,image/gif,application/pdf"
+            onChange={handleDocumentUpload}
+            className="hidden"
+          />
+          <label
+            htmlFor="document-upload"
+            className="cursor-pointer"
+          >
+            <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-600 font-medium mb-2">
+              Click to upload or drag and drop
+            </p>
+            <p className="text-sm text-gray-400">
+              JPG, PNG, GIF, or PDF (max 5MB each)
+            </p>
+          </label>
+        </div>
+
+        {/* Uploaded Documents List */}
+        {uploadedDocuments.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <h4 className="font-semibold text-sm text-gray-700">
+              Uploaded Documents ({uploadedDocuments.length})
+            </h4>
+            {uploadedDocuments.map((doc) => (
+              <div
+                key={doc.id}
+                className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200"
+              >
+                {/* Preview or Icon */}
+                {doc.preview ? (
+                  <img
+                    src={doc.preview}
+                    alt={doc.name}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-red-100 rounded flex items-center justify-center">
+                    <FileText className="w-6 h-6 text-red-500" />
+                  </div>
+                )}
+                
+                {/* File Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm truncate">{doc.name}</p>
+                  <p className="text-xs text-gray-500">{formatFileSize(doc.size)}</p>
+                </div>
+                
+                {/* Remove Button */}
+                <button
+                  type="button"
+                  onClick={() => removeDocument(doc.id)}
+                  className="p-2 hover:bg-red-100 rounded-full transition-colors"
+                >
+                  <X className="w-4 h-4 text-red-500" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Note */}
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-xs text-blue-700">
+            <strong>Note:</strong> You can upload documents now or submit your request and upload them later through the tracking page. Make sure to upload the required documents based on your classification.
+          </p>
+        </div>
+      </div>
     </motion.div>
   );
 
@@ -868,6 +1045,30 @@ export default function GMCRequestPage() {
             <p className="font-medium text-[var(--csfd-navy)]">{formData.phone || "-"}</p>
           </div>
         </div>
+
+        {/* Uploaded Documents Summary */}
+        {uploadedDocuments.length > 0 && (
+          <div className="mt-6">
+            <h4 className="font-semibold mb-3" style={{ color: "#111c4e" }}>
+              Uploaded Documents ({uploadedDocuments.length})
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {uploadedDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200"
+                >
+                  {doc.preview ? (
+                    <img src={doc.preview} alt={doc.name} className="w-6 h-6 object-cover rounded" />
+                  ) : (
+                    <FileText className="w-4 h-4 text-red-500" />
+                  )}
+                  <span className="text-sm">{doc.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
           <p className="text-sm text-amber-800">

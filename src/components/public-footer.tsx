@@ -130,7 +130,7 @@ export function PublicFooter() {
               </div>
 
               <h2 className="text-xl font-bold text-white mb-2">
-                iCSFD<span className="text-[#ffc400]">+</span>
+                CSFD
               </h2>
               <p className="text-sm text-white/60 mb-4 leading-relaxed">
                 Center for Student Formation and Discipline - University of Makati. 

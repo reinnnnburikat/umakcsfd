@@ -448,7 +448,7 @@ export default function CACRequestPage() {
           <div>
             <FloatingLabelInput
               label="UMak Student Number"
-              placeholder="K12042427"
+              placeholder="A12345678"
               required
               value={formData.studentNumber}
               onChange={(e) => handleInputChange("studentNumber", e.target.value)}

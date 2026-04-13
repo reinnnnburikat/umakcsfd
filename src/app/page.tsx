@@ -355,26 +355,26 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="flex items-center justify-center gap-4 mb-8"
+            className="flex items-center justify-center gap-6 mb-8"
           >
             <div className="relative">
-              <div className="absolute inset-0 bg-[#ffc400]/30 rounded-full blur-sm" />
+              <div className="absolute inset-0 bg-[#ffc400]/30 rounded-full blur-md" />
               <Image
                 src="/logos/UMAK LOGO.png"
                 alt="UMak Logo"
-                width={64}
-                height={64}
-                className="relative w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-white/30"
+                width={100}
+                height={100}
+                className="relative w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-3 border-white/30 shadow-xl"
               />
             </div>
             <div className="relative">
-              <div className="absolute inset-0 bg-[#ffc400]/30 rounded-full blur-sm" />
+              <div className="absolute inset-0 bg-[#ffc400]/30 rounded-full blur-md" />
               <Image
                 src="/logos/CSFD LOGO.png"
                 alt="CSFD Logo"
-                width={64}
-                height={64}
-                className="relative w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-white/30"
+                width={100}
+                height={100}
+                className="relative w-20 h-20 md:w-24 md:h-24 rounded-full object-cover border-3 border-white/30 shadow-xl"
               />
             </div>
           </motion.div>
@@ -386,9 +386,9 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mb-4 leading-tight">
-              <span className="block">iCSFD</span>
-              <span className="text-[#ffc400]">+</span>
-              <span className="block text-2xl md:text-3xl lg:text-4xl mt-2 text-white/90">
+              <span className="block">Center for Student</span>
+              <span className="block text-[#ffc400]">Formation and Discipline</span>
+              <span className="block text-xl md:text-2xl lg:text-3xl mt-2 text-white/90">
                 Digital Management System
               </span>
             </h1>
@@ -401,7 +401,7 @@ export default function HomePage() {
             transition={{ duration: 0.6, delay: 0.4 }}
             className="text-lg md:text-xl lg:text-2xl text-white/80 mb-8 max-w-3xl mx-auto"
           >
-            University of Makati - Center for Student Welfare and Development
+            University of Makati
           </motion.p>
 
           {/* CTA Buttons */}
@@ -575,7 +575,7 @@ export default function HomePage() {
             className="text-center mb-12 md:mb-16"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-              Why Choose <span style={{ color: COLORS.accent }}>iCSFD+</span>?
+              Why Choose <span style={{ color: COLORS.accent }}>CSFD</span>?
             </h2>
             <p className="text-lg text-white/70 max-w-2xl mx-auto">
               Experience a modern, efficient, and user-friendly approach to certificate requests.
