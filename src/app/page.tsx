@@ -895,13 +895,14 @@ export default function HomePage() {
                     Request a Certificate
                   </Button>
                 </Link>
-                <Link href="/auth/register">
+                <Link href="/track">
                   <Button
                     size="lg"
                     variant="outline"
                     className="bg-transparent border-2 border-white/30 text-white font-bold px-8 py-6 text-lg rounded-xl hover:bg-white/10 hover:border-white/50 transition-all duration-300"
                   >
-                    Create Account
+                    <Clock className="mr-2 h-5 w-5" />
+                    Track Your Request
                   </Button>
                 </Link>
               </div>

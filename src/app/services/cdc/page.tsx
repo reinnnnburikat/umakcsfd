@@ -80,6 +80,15 @@ export default function CDCRequestPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
+  // Auto-format student number: first letter uppercase, rest alphanumeric
+  const formatStudentNumber = (value: string): string => {
+    let cleaned = value.replace(/[^a-zA-Z0-9]/g, '');
+    if (cleaned.length > 0) {
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
+    return cleaned;
+  };
+
   // Real-time validation
   const validateField = (field: string, value: string): string => {
     switch (field) {
@@ -91,9 +100,6 @@ export default function CDCRequestPage() {
         return !value ? "Sex is required" : "";
       case "studentNumber":
         if (!value.trim()) return "Student number is required";
-        if (!/^[A-Z][A-Za-z0-9]*$/.test(value.trim())) {
-          return "Student number must start with a capital letter followed by alphanumeric characters";
-        }
         return "";
       case "college":
         return !value ? "College/Institute is required" : "";
@@ -115,11 +121,18 @@ export default function CDCRequestPage() {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let processedValue = value;
+    
+    // Auto-format student number
+    if (field === "studentNumber") {
+      processedValue = formatStudentNumber(value);
+    }
+    
+    setFormData((prev) => ({ ...prev, [field]: processedValue }));
     setTouched((prev) => ({ ...prev, [field]: true }));
     
     // Real-time validation
-    const error = validateField(field, value);
+    const error = validateField(field, processedValue);
     setErrors((prev) => ({ ...prev, [field]: error }));
   };
 

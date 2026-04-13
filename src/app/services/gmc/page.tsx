@@ -1,14 +1,30 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
 import { toast } from "sonner";
-import { Loader2, Check, User, FileText, ClipboardCheck } from "lucide-react";
+import { Loader2, Check, User, FileText, ClipboardCheck, AlertCircle, Upload, X, Save } from "lucide-react";
 import { WizardForm, WizardStep, FloatingLabelInput, FloatingLabelSelect, ValidationFeedback } from "@/components/ui/wizard-form";
 import { motion, AnimatePresence } from "framer-motion";
+
+// Auto-format student number: first letter uppercase, rest alphanumeric
+function formatStudentNumber(value: string): string {
+  // Remove any non-alphanumeric characters except letters and numbers
+  let cleaned = value.replace(/[^a-zA-Z0-9]/g, '');
+  
+  // Ensure first character is uppercase
+  if (cleaned.length > 0) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  
+  return cleaned;
+}
+
+// Local storage key for auto-save
+const GMC_FORM_STORAGE_KEY = "gmc_form_draft";
 
 const colleges = [
   { value: "College of Business and Financial Management", label: "College of Business and Financial Management" },
@@ -30,7 +46,7 @@ const colleges = [
   { value: "Institute of Psychology", label: "Institute of Psychology" },
   { value: "Institute of Social Works", label: "Institute of Social Works" },
   { value: "School of Law", label: "School of Law" },
-  { value: "Other", label: "Other" },
+  { value: "Other", label: "Other (Please specify)" },
 ];
 
 const purposes = [
@@ -40,28 +56,57 @@ const purposes = [
   { value: "Transfer", label: "Transfer" },
   { value: "Board Exam", label: "Board Exam" },
   { value: "Agency", label: "Agency" },
-  { value: "Other", label: "Other" },
+  { value: "Other", label: "Other (Please specify)" },
 ];
 
+// Classification options with requirements
 const classificationOptions = [
   {
-    label: "Currently enrolled at UMAK (Undergraduate)",
+    label: "Currently Enrolled",
     value: "Currently Enrolled",
-    description: "Either HSU or Undergraduate",
+    description: "Currently enrolled at UMAK (HSU or Undergraduate)",
     color: "#000B3C",
+    requirements: [
+      "Certificate of Registration (COR) - Current Semester",
+      "Valid School ID",
+      "Letter of Request addressed to CSFD Director",
+    ],
+    questions: [
+      { id: "yearLevel", label: "Year Level", type: "select", options: ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"], required: true },
+      { id: "semester", label: "Current Semester", type: "select", options: ["1st Semester", "2nd Semester", "Summer"], required: true },
+    ],
   },
   {
-    label: "Graduate at UMAK (HSU/College/Graduate Studies Program)",
+    label: "Graduate",
     value: "Graduate",
-    description: "Students who have successfully completed their prescribed course, track, strand, or academic program.",
-    color: "#f97316",
+    description: "Graduate at UMAK (HSU/College/Graduate Studies Program)",
+    color: "#1F9E55",
+    requirements: [
+      "Certificate of Graduation or Diploma (photocopy)",
+      "Valid Government-issued ID",
+      "Letter of Request addressed to CSFD Director",
+    ],
+    questions: [
+      { id: "yearGraduated", label: "Year Graduated", type: "text", placeholder: "e.g., 2023", required: true },
+      { id: "programCompleted", label: "Program Completed", type: "text", placeholder: "e.g., Bachelor of Science in Computer Science", required: true },
+    ],
   },
   {
-    label: "Former/Previous student at UMAK (HSU/College)",
+    label: "Non-Completer",
     value: "Non-Completer",
-    description: "Students who previously enrolled at the University of Makati but did not complete their prescribed course.",
+    description: "Former/Previous student at UMAK who did not complete the program",
     color: "#ffc400",
     textColor: "#111c4e",
+    requirements: [
+      "Certificate of Registration (COR) - Last Semester Attended",
+      "Valid Government-issued ID",
+      "Letter of Request addressed to CSFD Director stating reason for non-completion",
+    ],
+    questions: [
+      { id: "lastYearAttended", label: "Last Year Attended", type: "text", placeholder: "e.g., 2020", required: true },
+      { id: "lastSemester", label: "Last Semester Attended", type: "select", options: ["1st Semester", "2nd Semester", "Summer"], required: true },
+      { id: "reasonForLeaving", label: "Reason for Leaving", type: "textarea", placeholder: "Brief explanation...", required: true },
+    ],
   },
 ];
 
@@ -69,6 +114,30 @@ const sexOptions = [
   { value: "Male", label: "Male" },
   { value: "Female", label: "Female" },
 ];
+
+// Default form data
+const defaultFormData = {
+  givenName: "",
+  surname: "",
+  middleName: "",
+  extensionName: "",
+  sex: "",
+  studentNumber: "",
+  college: "",
+  otherCollege: "",
+  classification: "",
+  yearGraduated: "",
+  programCompleted: "",
+  yearLevel: "",
+  semester: "",
+  lastYearAttended: "",
+  lastSemester: "",
+  reasonForLeaving: "",
+  purpose: "",
+  otherPurpose: "",
+  email: "",
+  phone: "",
+};
 
 export default function GMCRequestPage() {
   const router = useRouter();
@@ -78,26 +147,67 @@ export default function GMCRequestPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [controlNumber, setControlNumber] = useState("");
   const [trackingToken, setTrackingToken] = useState("");
+  const [hasRestoredDraft, setHasRestoredDraft] = useState(false);
 
-  const [formData, setFormData] = useState({
-    givenName: "",
-    surname: "",
-    middleName: "",
-    extensionName: "",
-    sex: "",
-    studentNumber: "",
-    college: "",
-    otherCollege: "",
-    classification: "",
-    yearGraduated: "",
-    purpose: "",
-    otherPurpose: "",
-    email: "",
-    phone: "",
-  });
+  const [formData, setFormData] = useState(defaultFormData);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Load draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedDraft = localStorage.getItem(GMC_FORM_STORAGE_KEY);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.formData && Object.keys(parsed.formData).length > 0) {
+          setFormData(parsed.formData);
+          setLastSaved(new Date(parsed.timestamp));
+          setHasRestoredDraft(true);
+          toast.success("Draft restored! Your previous form data has been loaded.", {
+            duration: 5000,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error loading draft:", error);
+    }
+  }, []);
+
+  // Auto-save to localStorage
+  const saveDraft = useCallback(() => {
+    try {
+      const draftData = {
+        formData,
+        timestamp: new Date().toISOString(),
+      };
+      localStorage.setItem(GMC_FORM_STORAGE_KEY, JSON.stringify(draftData));
+      setLastSaved(new Date());
+    } catch (error) {
+      console.error("Error saving draft:", error);
+    }
+  }, [formData]);
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Object.values(formData).some(v => v.trim())) {
+        saveDraft();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [formData, saveDraft]);
+
+  // Clear draft after successful submission
+  const clearDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(GMC_FORM_STORAGE_KEY);
+    } catch (error) {
+      console.error("Error clearing draft:", error);
+    }
+  }, []);
 
   // Real-time validation
   const validateField = (field: string, value: string): string => {
@@ -110,9 +220,7 @@ export default function GMCRequestPage() {
         return !value ? "Sex is required" : "";
       case "studentNumber":
         if (!value.trim()) return "Student number is required";
-        if (!/^[A-Z][A-Za-z0-9]*$/.test(value.trim())) {
-          return "Student number must start with a capital letter followed by alphanumeric characters";
-        }
+        // Just check if it has content - formatting is automatic
         return "";
       case "college":
         return !value ? "College/Institute is required" : "";
@@ -132,17 +240,36 @@ export default function GMCRequestPage() {
         return "";
       case "yearGraduated":
         return formData.classification === "Graduate" && !value.trim() ? "Year graduated is required" : "";
+      case "programCompleted":
+        return formData.classification === "Graduate" && !value.trim() ? "Program completed is required" : "";
+      case "yearLevel":
+        return formData.classification === "Currently Enrolled" && !value.trim() ? "Year level is required" : "";
+      case "semester":
+        return formData.classification === "Currently Enrolled" && !value.trim() ? "Semester is required" : "";
+      case "lastYearAttended":
+        return formData.classification === "Non-Completer" && !value.trim() ? "Last year attended is required" : "";
+      case "lastSemester":
+        return formData.classification === "Non-Completer" && !value.trim() ? "Last semester is required" : "";
+      case "reasonForLeaving":
+        return formData.classification === "Non-Completer" && !value.trim() ? "Reason for leaving is required" : "";
       default:
         return "";
     }
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    let processedValue = value;
+    
+    // Auto-format student number
+    if (field === "studentNumber") {
+      processedValue = formatStudentNumber(value);
+    }
+    
+    setFormData((prev) => ({ ...prev, [field]: processedValue }));
     setTouched((prev) => ({ ...prev, [field]: true }));
     
     // Real-time validation
-    const error = validateField(field, value);
+    const error = validateField(field, processedValue);
     setErrors((prev) => ({ ...prev, [field]: error }));
   };
 
@@ -179,10 +306,22 @@ export default function GMCRequestPage() {
     return isValid;
   };
 
-  // Validate step 2
+  // Validate step 2 - classification-specific questions
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string> = {};
     let isValid = true;
+
+    // Validate classification-specific fields
+    const classification = classificationOptions.find(c => c.value === formData.classification);
+    if (classification?.questions) {
+      classification.questions.forEach(q => {
+        const error = validateField(q.id, formData[q.id as keyof typeof formData]);
+        if (error) {
+          newErrors[q.id] = error;
+          isValid = false;
+        }
+      });
+    }
 
     const purposeError = validateField("purpose", formData.purpose);
     if (purposeError) {
@@ -194,14 +333,6 @@ export default function GMCRequestPage() {
       const otherPurposeError = validateField("otherPurpose", formData.otherPurpose);
       if (otherPurposeError) {
         newErrors.otherPurpose = otherPurposeError;
-        isValid = false;
-      }
-    }
-
-    if (formData.classification === "Graduate") {
-      const yearError = validateField("yearGraduated", formData.yearGraduated);
-      if (yearError) {
-        newErrors.yearGraduated = yearError;
         isValid = false;
       }
     }
@@ -233,25 +364,34 @@ export default function GMCRequestPage() {
           requestorCollege: formData.college === "Other" ? formData.otherCollege : formData.college,
           requestorSex: formData.sex,
           classification: formData.classification,
-          yearGraduated: formData.yearGraduated,
+          yearGraduated: formData.yearGraduated || formData.lastYearAttended,
           purpose: formData.purpose === "Other" ? formData.otherPurpose : formData.purpose,
           otherPurpose: formData.purpose === "Other" ? formData.otherPurpose : "",
+          additionalData: {
+            programCompleted: formData.programCompleted,
+            yearLevel: formData.yearLevel,
+            semester: formData.semester,
+            lastSemester: formData.lastSemester,
+            reasonForLeaving: formData.reasonForLeaving,
+          },
         }),
       });
 
       const data = await response.json();
 
       if (data.success) {
+        // Clear draft on success
+        clearDraft();
         setControlNumber(data.data.controlNumber);
         setTrackingToken(data.data.trackingToken);
         setPage("success");
         toast.success("Request submitted successfully!");
       } else {
-        toast.error(data.error || "Failed to submit request");
+        toast.error(data.error || "Failed to submit request. Please try again.");
       }
     } catch (error) {
       console.error("Error submitting request:", error);
-      toast.error("Failed to submit request");
+      toast.error("Failed to submit request. Please check your connection and try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -284,9 +424,26 @@ export default function GMCRequestPage() {
   const isStep2Complete = useMemo(() => {
     const hasPurpose = formData.purpose;
     const hasOtherPurpose = formData.purpose !== "Other" || formData.otherPurpose.trim();
-    const hasYearGraduated = formData.classification !== "Graduate" || formData.yearGraduated.trim();
-    return hasPurpose && hasOtherPurpose && hasYearGraduated && !errors.purpose && !errors.otherPurpose && !errors.yearGraduated;
+    
+    // Check classification-specific fields
+    const classification = classificationOptions.find(c => c.value === formData.classification);
+    let classificationFieldsComplete = true;
+    if (classification?.questions) {
+      for (const q of classification.questions) {
+        if (q.required && !formData[q.id as keyof typeof formData]?.trim()) {
+          classificationFieldsComplete = false;
+          break;
+        }
+      }
+    }
+    
+    return hasPurpose && hasOtherPurpose && classificationFieldsComplete && !errors.purpose && !errors.otherPurpose;
   }, [formData, errors]);
+
+  // Get current classification info
+  const currentClassification = useMemo(() => {
+    return classificationOptions.find(c => c.value === formData.classification);
+  }, [formData.classification]);
 
   // Step 1 Content: Requester Information
   const Step1Content = (
@@ -296,6 +453,14 @@ export default function GMCRequestPage() {
       exit={{ opacity: 0, y: -20 }}
       className="space-y-6"
     >
+      {/* Auto-save indicator */}
+      {lastSaved && (
+        <div className="flex items-center gap-2 text-sm text-gray-500 justify-end">
+          <Save className="w-4 h-4" />
+          <span>Draft auto-saved at {lastSaved.toLocaleTimeString()}</span>
+        </div>
+      )}
+
       {/* Personal Information */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h3 className="text-lg font-bold mb-6 flex items-center gap-2" style={{ color: "#111c4e" }}>
@@ -359,7 +524,7 @@ export default function GMCRequestPage() {
           <div>
             <FloatingLabelInput
               label="UMak Student Number"
-              placeholder="K12042427"
+              placeholder="e.g., K12042427"
               required
               value={formData.studentNumber}
               onChange={(e) => handleInputChange("studentNumber", e.target.value)}
@@ -423,18 +588,7 @@ export default function GMCRequestPage() {
               Classification<span className="text-red-500">*</span>
             </label>
             
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {/* Reminder Card */}
-              <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 flex items-start gap-4 border-2 border-gray-200">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xl md:text-2xl font-bold">!</span>
-                </div>
-                <div>
-                  <h3 className="font-bold text-xs md:text-sm mb-1" style={{ color: "#111c4e" }}>REMINDER</h3>
-                  <p className="text-xs text-gray-600">Please read the classification description for accuracy.</p>
-                </div>
-              </div>
-              
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Classification Options */}
               {classificationOptions.map((option) => (
                 <motion.div
@@ -454,7 +608,7 @@ export default function GMCRequestPage() {
                   whileTap={{ scale: 0.98 }}
                 >
                   <div className="flex items-start justify-between">
-                    <h3 className="font-bold text-xs md:text-sm mb-2">{option.label}</h3>
+                    <h3 className="font-bold text-sm md:text-base mb-2">{option.label}</h3>
                     {formData.classification === option.value && (
                       <Check className="w-5 h-5 text-white flex-shrink-0" />
                     )}
@@ -502,7 +656,7 @@ export default function GMCRequestPage() {
     </motion.div>
   );
 
-  // Step 2 Content: Additional Details
+  // Step 2 Content: Classification-specific requirements and purpose
   const Step2Content = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -510,28 +664,104 @@ export default function GMCRequestPage() {
       exit={{ opacity: 0, y: -20 }}
       className="space-y-6"
     >
+      {/* Classification Requirements */}
+      {currentClassification && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: currentClassification.color }}
+            >
+              <AlertCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold" style={{ color: "#111c4e" }}>
+                Requirements for {currentClassification.label}
+              </h3>
+              <p className="text-sm text-gray-500">{currentClassification.description}</p>
+            </div>
+          </div>
+
+          {/* Requirements List */}
+          <div className="bg-amber-50 rounded-lg p-4 mb-6 border border-amber-200">
+            <h4 className="font-semibold text-amber-800 mb-3">Required Documents:</h4>
+            <ul className="space-y-2">
+              {currentClassification.requirements.map((req, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-amber-700">
+                  <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{req}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Classification-specific Questions */}
+          <div className="space-y-4">
+            <h4 className="font-semibold" style={{ color: "#111c4e" }}>Additional Information</h4>
+            {currentClassification.questions?.map((q) => (
+              <div key={q.id}>
+                {q.type === "select" ? (
+                  <FloatingLabelSelect
+                    label={q.label}
+                    required={q.required}
+                    options={q.options?.map(o => ({ value: o, label: o })) || []}
+                    value={formData[q.id as keyof typeof formData] as string}
+                    onChange={(e) => handleInputChange(q.id, e.target.value)}
+                    onBlur={() => handleBlur(q.id)}
+                    error={touched[q.id] ? errors[q.id] : ""}
+                  />
+                ) : q.type === "textarea" ? (
+                  <div className="relative">
+                    <textarea
+                      id={q.id}
+                      placeholder={q.placeholder}
+                      required={q.required}
+                      value={formData[q.id as keyof typeof formData] as string}
+                      onChange={(e) => handleInputChange(q.id, e.target.value)}
+                      onBlur={() => handleBlur(q.id)}
+                      className="w-full px-4 pt-6 pb-2 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all min-h-[100px]"
+                      style={{
+                        borderColor: errors[q.id] ? "#ef4444" : "#111c4e",
+                      }}
+                    />
+                    <label
+                      htmlFor={q.id}
+                      className="absolute left-4 top-2 text-xs text-gray-500"
+                    >
+                      {q.label}
+                      {q.required && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+                    {touched[q.id] && errors[q.id] && (
+                      <p className="text-red-500 text-sm mt-1">{errors[q.id]}</p>
+                    )}
+                  </div>
+                ) : (
+                  <FloatingLabelInput
+                    label={q.label}
+                    placeholder={q.placeholder}
+                    required={q.required}
+                    value={formData[q.id as keyof typeof formData] as string}
+                    onChange={(e) => handleInputChange(q.id, e.target.value)}
+                    onBlur={() => handleBlur(q.id)}
+                    error={touched[q.id] ? errors[q.id] : ""}
+                  />
+                )}
+                {touched[q.id] && formData[q.id as keyof typeof formData] && !errors[q.id] && (
+                  <ValidationFeedback isValid message="Looks good!" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Purpose */}
       <div className="bg-white rounded-xl shadow-lg p-6">
         <h3 className="text-lg font-bold mb-6" style={{ color: "#111c4e" }}>
-          Additional Details
+          Purpose of Request
         </h3>
         
         <div className="space-y-6">
-          {formData.classification === "Graduate" && (
-            <div>
-              <FloatingLabelInput
-                label="Year Graduated"
-                required
-                value={formData.yearGraduated}
-                onChange={(e) => handleInputChange("yearGraduated", e.target.value)}
-                onBlur={() => handleBlur("yearGraduated")}
-                error={touched.yearGraduated ? errors.yearGraduated : ""}
-              />
-              {touched.yearGraduated && formData.yearGraduated && !errors.yearGraduated && (
-                <ValidationFeedback isValid message="Looks good!" />
-              )}
-            </div>
-          )}
-
           <div>
             <FloatingLabelSelect
               label="Purpose"
@@ -623,12 +853,6 @@ export default function GMCRequestPage() {
             <p className="text-sm text-gray-500">Classification</p>
             <p className="font-medium text-[var(--csfd-navy)]">{formData.classification}</p>
           </div>
-          {formData.classification === "Graduate" && (
-            <div className="border-b border-gray-100 pb-3">
-              <p className="text-sm text-gray-500">Year Graduated</p>
-              <p className="font-medium text-[var(--csfd-navy)]">{formData.yearGraduated}</p>
-            </div>
-          )}
           <div className="border-b border-gray-100 pb-3">
             <p className="text-sm text-gray-500">Purpose</p>
             <p className="font-medium text-[var(--csfd-navy)]">
@@ -648,7 +872,7 @@ export default function GMCRequestPage() {
         <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
           <p className="text-sm text-amber-800">
             <strong>Important:</strong> Please ensure all information is correct before submitting.
-            A confirmation email will be sent to {formData.email || "your email address"}.
+            A confirmation email will be sent to {formData.email || "your email address"} with a tracking link.
           </p>
         </div>
       </div>
@@ -668,7 +892,7 @@ export default function GMCRequestPage() {
     {
       id: "additional-details",
       title: "Details",
-      description: "Purpose & Classification",
+      description: "Requirements & Purpose",
       content: Step2Content,
       isComplete: isStep2Complete,
       canProceed: isStep2Complete,
@@ -685,6 +909,9 @@ export default function GMCRequestPage() {
 
   // Handle step change with validation
   const handleStepChange = (step: number) => {
+    // Save draft when moving between steps
+    saveDraft();
+    
     if (step > currentStep) {
       // Moving forward - validate current step
       if (currentStep === 0 && !validateStep1()) {
@@ -756,8 +983,7 @@ export default function GMCRequestPage() {
               transition={{ delay: 0.5 }}
               className="text-sm text-gray-600 mb-8"
             >
-              Please save your control number. You can use it to track your request status.
-              A confirmation email has been sent to {formData.email}.
+              Please save your control number. A confirmation email with a tracking link has been sent to {formData.email}.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -768,7 +994,7 @@ export default function GMCRequestPage() {
               <button
                 className="px-8 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity"
                 style={{ backgroundColor: "#111c4e", color: "white" }}
-                onClick={() => router.push("/track")}
+                onClick={() => router.push(`/track?token=${trackingToken}`)}
               >
                 Track Request
               </button>
@@ -965,7 +1191,7 @@ export default function GMCRequestPage() {
               </div>
               <div className="text-center mb-8">
                 <p className="text-white text-sm md:text-base">
-                  Upon cancelling, the request will not be saved.
+                  Your progress will be saved. You can continue later.
                 </p>
               </div>
               <div className="flex justify-center gap-4 md:gap-6">
@@ -973,6 +1199,7 @@ export default function GMCRequestPage() {
                   className="px-8 md:px-12 py-3 rounded-lg font-bold text-base md:text-lg hover:opacity-90 transition-opacity"
                   style={{ backgroundColor: "#dc2626", color: "white" }}
                   onClick={() => {
+                    saveDraft();
                     setShowCancelModal(false);
                     router.push("/services");
                   }}

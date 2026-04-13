@@ -3,11 +3,11 @@
 import React, { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import Image from "next/image";
 import { AlertCircle, Loader2, Shield, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 
-function LoginFormContent() {
+function PortalLoginFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard/staff";
@@ -60,164 +60,132 @@ function LoginFormContent() {
     <motion.form
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.2 }}
+      transition={{ duration: 0.5 }}
       onSubmit={handleSubmit}
-      className="w-full max-w-md px-8"
+      className="w-full max-w-md"
     >
-      {/* Staff/Admin Notice */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4, delay: 0.3 }}
-        className="mb-6 p-4 rounded-lg border-2"
-        style={{
-          backgroundColor: "#111c4e10",
-          borderColor: "#111c4e30",
-        }}
-      >
+      {/* Logo */}
+      <div className="flex justify-center mb-8">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-full" style={{ backgroundColor: "#111c4e" }}>
-            <Shield className="h-5 w-5 text-[#ffc400]" />
+          <div className="relative">
+            <Image
+              src="/logos/UMAK LOGO.png"
+              alt="UMak Logo"
+              width={60}
+              height={60}
+              className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-white/30"
+            />
           </div>
-          <div>
-            <p className="font-semibold text-sm" style={{ color: "#111c4e" }}>
-              Staff Portal
-            </p>
-            <p className="text-xs text-muted-foreground">
-              This portal is for CSFD Staff and Administrators only.
-            </p>
+          <div className="relative">
+            <Image
+              src="/logos/CSFD LOGO.png"
+              alt="CSFD Logo"
+              width={60}
+              height={60}
+              className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-white/30"
+            />
           </div>
         </div>
-      </motion.div>
+      </div>
 
-      <h2
-        className="text-3xl md:text-4xl font-bold mb-2 text-center"
-        style={{ color: "#111c4e" }}
-      >
-        PORTAL LOGIN
-      </h2>
-      <p className="text-center text-sm text-muted-foreground mb-8">
-        Enter your credentials to access the dashboard
-      </p>
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+          Staff Portal
+        </h1>
+        <p className="text-white/60 text-sm">
+          Authorized personnel only
+        </p>
+      </div>
 
       {error && (
         <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-6 p-4 rounded-lg flex items-center gap-2"
-          style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 rounded-lg flex items-center gap-2 bg-red-500/20 text-red-200 border border-red-500/30"
         >
-          <AlertCircle className="h-4 w-4 flex-shrink-0" />
+          <AlertCircle className="h-4 w-4" />
           <span className="text-sm">{error}</span>
         </motion.div>
       )}
 
-      <div className="mb-5">
-        <label className="block text-sm font-medium mb-2" style={{ color: "#111c4e" }}>
-          Email Address
-        </label>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </span>
-          <input
-            type="text"
-            placeholder="Enter your email"
-            className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
-            style={{ borderColor: "#111c4e30" }}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onFocus={(e) => e.target.style.borderColor = "#111c4e"}
-            onBlur={(e) => e.target.style.borderColor = "#111c4e30"}
-            required
-          />
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm text-white/70 mb-2">Email Address</label>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Enter your email"
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-[#ffc400] focus:ring-1 focus:ring-[#ffc400] transition-all"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="mb-5">
-        <label className="block text-sm font-medium mb-2" style={{ color: "#111c4e" }}>
-          Password
-        </label>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-            <Lock className="w-5 h-5" />
-          </span>
-          <input
-            type="password"
-            placeholder="Enter your password"
-            className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
-            style={{ borderColor: "#111c4e30" }}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onFocus={(e) => e.target.style.borderColor = "#111c4e"}
-            onBlur={(e) => e.target.style.borderColor = "#111c4e30"}
-            required
-          />
+        <div>
+          <label className="block text-sm text-white/70 mb-2">Password</label>
+          <div className="relative">
+            <input
+              type="password"
+              placeholder="Enter your password"
+              className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-[#ffc400] focus:ring-1 focus:ring-[#ffc400] transition-all"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
         </div>
-      </div>
-
-      <div className="mb-6 text-right">
-        <Link
-          href="/auth/forgot-password"
-          className="text-sm hover:opacity-80 transition-opacity"
-          style={{ color: "#111c4e" }}
-        >
-          Forgot password?
-        </Link>
       </div>
 
       <button
         type="submit"
-        className="w-full py-3 rounded-lg font-medium text-white mb-6 hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-        style={{ backgroundColor: "#111c4e" }}
+        className="w-full py-3 mt-6 rounded-lg font-bold text-[#111c4e] bg-[#ffc400] hover:bg-[#ffc400]/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
         disabled={isLoading}
       >
         {isLoading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
             Signing in...
           </>
         ) : (
-          "Sign In"
+          <>
+            <Lock className="h-5 w-5" />
+            Sign In
+          </>
         )}
       </button>
 
-      <div className="flex items-center mb-6">
-        <div className="flex-1 border-t border-gray-200"></div>
-        <span className="px-4 text-gray-400 text-sm">or</span>
-        <div className="flex-1 border-t border-gray-200"></div>
-      </div>
-
-      <div className="text-center">
-        <span className="text-gray-500 text-sm">Need to request a certificate? </span>
-        <Link
-          href="/"
-          className="text-sm font-medium hover:opacity-80 transition-opacity"
-          style={{ color: "#111c4e" }}
-        >
-          Back to Home
-        </Link>
+      {/* Security Notice */}
+      <div className="mt-8 p-4 rounded-lg bg-white/5 border border-white/10">
+        <div className="flex items-start gap-3">
+          <Shield className="w-5 h-5 text-[#ffc400] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-white/80 text-sm font-medium">Security Notice</p>
+            <p className="text-white/50 text-xs mt-1">
+              This portal is restricted to authorized CSFD personnel only. All login attempts are monitored and logged.
+            </p>
+          </div>
+        </div>
       </div>
     </motion.form>
   );
 }
 
-function LoginFormSkeleton() {
+function PortalLoginSkeleton() {
   return (
-    <div className="w-full max-w-md px-8">
-      <div className="h-20 bg-muted rounded animate-pulse mb-6" />
-      <div className="h-10 w-40 bg-muted rounded animate-pulse mx-auto mb-2" />
-      <div className="h-4 w-60 bg-muted rounded animate-pulse mx-auto mb-8" />
-      <div className="space-y-5">
-        <div className="h-12 bg-muted rounded animate-pulse" />
-        <div className="h-12 bg-muted rounded animate-pulse" />
-        <div className="h-12 bg-muted rounded animate-pulse" />
+    <div className="w-full max-w-md">
+      <div className="flex justify-center mb-8 gap-4">
+        <div className="w-16 h-16 bg-white/10 rounded-full animate-pulse" />
+        <div className="w-16 h-16 bg-white/10 rounded-full animate-pulse" />
+      </div>
+      <div className="h-8 w-32 bg-white/10 rounded mx-auto mb-4 animate-pulse" />
+      <div className="h-4 w-40 bg-white/10 rounded mx-auto mb-8 animate-pulse" />
+      <div className="space-y-4">
+        <div className="h-12 bg-white/10 rounded animate-pulse" />
+        <div className="h-12 bg-white/10 rounded animate-pulse" />
+        <div className="h-12 bg-[#ffc400]/20 rounded animate-pulse" />
       </div>
     </div>
   );
@@ -226,139 +194,56 @@ function LoginFormSkeleton() {
 export default function PortalLoginPage() {
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Welcome Section */}
+      {/* Left Side - Branding */}
       <div
-        className="hidden lg:flex lg:w-[40%] relative overflow-hidden"
-        style={{ backgroundColor: "#111c4e" }}
+        className="hidden lg:flex lg:w-1/2 relative items-center justify-center"
+        style={{
+          background: "linear-gradient(135deg, #111c4e 0%, #0a1229 100%)",
+        }}
       >
-        {/* Decorative Background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: "url('/images/elementfull.png')",
-            backgroundSize: "contain",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            opacity: 0.8,
-          }}
-        />
-
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#111c4e]/90 via-[#111c4e]/70 to-[#0a1229]/90" />
-
-        {/* Decorative Orbs */}
-        <div
-          className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-20"
-          style={{ backgroundColor: "#ffc400" }}
-        />
-        <div
-          className="absolute bottom-1/4 right-1/4 w-48 h-48 rounded-full blur-3xl opacity-10"
-          style={{ backgroundColor: "#ffc400" }}
-        />
+        {/* Decorative elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-1/4 -right-1/4 w-96 h-96 bg-[#ffc400]/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-1/4 -left-1/4 w-96 h-96 bg-[#ffc400]/5 rounded-full blur-3xl" />
+          <div
+            className="absolute inset-0 opacity-5"
+            style={{
+              backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
+              backgroundSize: "32px 32px",
+            }}
+          />
+        </div>
 
         {/* Content */}
-        <div className="flex items-center justify-center h-full px-12 relative z-10">
+        <div className="relative z-10 text-center px-12">
           <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-left text-white max-w-md"
           >
-            <div className="flex items-center gap-4 mb-8">
-              <div className="flex items-center gap-3">
-                <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm p-1">
-                  <img
-                    src="/logos/UMAK LOGO.png"
-                    alt="UMak Logo"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-sm p-1">
-                  <img
-                    src="/logos/CSFD LOGO.png"
-                    alt="CSFD Logo"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <h1 className="text-4xl md:text-5xl font-bold mb-2">
-              Welcome back,
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
+              iCSFD<span className="text-[#ffc400]">+</span>
             </h1>
-            <h2
-              className="text-4xl md:text-5xl font-bold mb-6"
-              style={{ color: "#ffc400" }}
-            >
-              Heron!
-            </h2>
-
-            <div className="w-20 h-1 rounded-full mb-6" style={{ backgroundColor: "#ffc400" }} />
-
-            <p className="text-lg text-white/80 mb-4">
-              University of Makati
+            <p className="text-xl text-white/60 mb-8">
+              Integrated CSFD Digital Management System
             </p>
-            <p className="text-base text-white/60">
-              University of Character
+            <p className="text-white/40 text-sm">
+              University of Makati - Center for Student Welfare and Development
             </p>
-
-            <div className="mt-12 p-4 rounded-lg bg-white/5 backdrop-blur-sm border border-white/10">
-              <div className="flex items-center gap-3">
-                <Shield className="h-8 w-8 text-[#ffc400]" />
-                <div>
-                  <p className="font-semibold text-white">Secure Portal</p>
-                  <p className="text-sm text-white/60">Authorized personnel only</p>
-                </div>
-              </div>
-            </div>
           </motion.div>
         </div>
       </div>
 
-      {/* Right Side - Login Section */}
+      {/* Right Side - Login Form */}
       <div
-        className="flex-1 bg-gray-50 flex items-center justify-center relative"
-        style={{ backgroundColor: "#f8f9fa" }}
+        className="flex-1 flex items-center justify-center p-8"
+        style={{
+          background: "linear-gradient(135deg, #0a1229 0%, #111c4e 100%)",
+        }}
       >
-        {/* Home Link */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="absolute top-6 right-6"
-        >
-          <Link
-            href="/"
-            className="flex items-center gap-2 text-sm font-medium hover:opacity-80 transition-opacity px-4 py-2 rounded-lg hover:bg-gray-100"
-            style={{ color: "#111c4e" }}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </Link>
-        </motion.div>
-
-        {/* Mobile Logo */}
-        <div className="absolute top-6 left-6 lg:hidden flex items-center gap-2">
-          <div className="w-10 h-10 rounded-full bg-[#111c4e] p-1">
-            <img
-              src="/logos/CSFD LOGO.png"
-              alt="CSFD Logo"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <span className="font-bold text-[#111c4e]">iCSFD+</span>
-        </div>
-
-        <Suspense fallback={<LoginFormSkeleton />}>
-          <LoginFormContent />
+        <Suspense fallback={<PortalLoginSkeleton />}>
+          <PortalLoginFormContent />
         </Suspense>
-
-        {/* Footer */}
-        <div className="absolute bottom-6 left-0 right-0 text-center text-xs text-muted-foreground">
-          <p>iCSFD+ Digital Management System &copy; {new Date().getFullYear()}</p>
-        </div>
       </div>
     </div>
   );
