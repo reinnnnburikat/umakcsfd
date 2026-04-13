@@ -38,14 +38,11 @@ export function useAuth() {
     router.push("/login");
   }, [router]);
 
-  const hasRole = useCallback(
-    (roles: string | string[]) => {
-      if (!user?.role) return false;
-      const roleArray = Array.isArray(roles) ? roles : [roles];
-      return roleArray.includes(user.role);
-    },
-    [user?.role]
-  );
+  const hasRole = (roles: string | string[]) => {
+    if (!user?.role) return false;
+    const roleArray = Array.isArray(roles) ? roles : [roles];
+    return roleArray.includes(user.role);
+  };
 
   const isStaff = hasRole(["STAFF", "ADMIN", "SUPER_ADMIN"]);
   const isAdmin = hasRole(["ADMIN", "SUPER_ADMIN"]);
