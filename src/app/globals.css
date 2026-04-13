@@ -725,19 +725,49 @@
 
 /* Skeleton loading */
 .skeleton {
-  @apply animate-pulse bg-muted rounded;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background-color: oklch(0.96 0.01 250);
+  border-radius: 0.375rem;
+}
+
+.dark .skeleton {
+  background-color: oklch(0.25 0.02 250);
 }
 
 .skeleton-text {
-  @apply h-4 w-full skeleton;
+  height: 1rem;
+  width: 100%;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background-color: oklch(0.96 0.01 250);
+  border-radius: 0.375rem;
+}
+
+.dark .skeleton-text {
+  background-color: oklch(0.25 0.02 250);
 }
 
 .skeleton-title {
-  @apply h-6 w-3/4 skeleton;
+  height: 1.5rem;
+  width: 75%;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background-color: oklch(0.96 0.01 250);
+  border-radius: 0.375rem;
+}
+
+.dark .skeleton-title {
+  background-color: oklch(0.25 0.02 250);
 }
 
 .skeleton-avatar {
-  @apply h-10 w-10 rounded-full skeleton;
+  height: 2.5rem;
+  width: 2.5rem;
+  border-radius: 9999px;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  background-color: oklch(0.96 0.01 250);
+}
+
+.dark .skeleton-avatar {
+  background-color: oklch(0.25 0.02 250);
 }
 
 /* Entrance animations for children */
