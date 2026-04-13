@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
-
-const prisma = new PrismaClient();
+import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,13 +22,13 @@ export async function GET(request: NextRequest) {
     if (actionFilter) where.action = actionFilter;
 
     const [logs, total] = await Promise.all([
-      prisma.auditLog.findMany({
+      db.auditLog.findMany({
         where,
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
-      prisma.auditLog.count({ where }),
+      db.auditLog.count({ where }),
     ]);
 
     return NextResponse.json({

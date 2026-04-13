@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient, RequestStatus } from "@prisma/client";
+import { RequestStatus } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { addMonths } from "@/lib/utils";
 import { sendStatusUpdateEmail, getRequestTypeDisplayName } from "@/lib/email";
 import { notifyRequestStatusUpdate, notifyUsersByRole } from "@/lib/notifications";
-
-const prisma = new PrismaClient();
 
 // GET - Get a single request
 export async function GET(
@@ -16,7 +15,7 @@ export async function GET(
   try {
     const { id } = await params;
     
-    const req = await prisma.request.findUnique({
+    const req = await db.request.findUnique({
       where: { id },
       include: {
         processor: {
@@ -55,7 +54,7 @@ export async function PATCH(
     const { status, remarks, certificateUrl } = body;
 
     // Get the current request to check previous status and get requestor info
-    const currentRequest = await prisma.request.findUnique({
+    const currentRequest = await db.request.findUnique({
       where: { id },
       include: {
         processor: {
@@ -93,7 +92,7 @@ export async function PATCH(
       }
     }
 
-    const updatedRequest = await prisma.request.update({
+    const updatedRequest = await db.request.update({
       where: { id },
       data: updateData,
       include: {
@@ -104,7 +103,7 @@ export async function PATCH(
     });
 
     // Create audit log
-    await prisma.auditLog.create({
+    await db.auditLog.create({
       data: {
         userId: session.user.id,
         userName: session.user.name || "Unknown",
@@ -143,7 +142,7 @@ export async function PATCH(
         .then(result => {
           if (result.success) {
             // Update email sent timestamp
-            prisma.request.update({
+            db.request.update({
               where: { id },
               data: { emailSentAt: new Date() },
             }).catch(err => console.error("Failed to update emailSentAt:", err));
@@ -154,7 +153,7 @@ export async function PATCH(
         });
 
       // Try to find the user by email to send in-app notification
-      prisma.user.findUnique({
+      db.user.findUnique({
         where: { email: currentRequest.requestorEmail },
         select: { id: true },
       }).then(user => {
@@ -200,7 +199,7 @@ export async function DELETE(
     const { id } = await params;
 
     // Get the request before deleting for audit log
-    const existingRequest = await prisma.request.findUnique({
+    const existingRequest = await db.request.findUnique({
       where: { id },
     });
 
@@ -209,12 +208,12 @@ export async function DELETE(
     }
 
     // Delete the request
-    await prisma.request.delete({
+    await db.request.delete({
       where: { id },
     });
 
     // Create audit log
-    await prisma.auditLog.create({
+    await db.auditLog.create({
       data: {
         userId: session.user.id,
         userName: session.user.name || "Unknown",

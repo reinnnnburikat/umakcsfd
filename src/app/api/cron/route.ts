@@ -1,5 +1,5 @@
 /**
- * Cron Job API Endpoints for iCSFD+
+ * Cron Job API Endpoints for CSFD
  * 
  * This file provides API endpoints for scheduled tasks:
  * - Processing reminders (requests pending > 3 days)
@@ -11,15 +11,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient, RequestStatus, UserRole } from "@prisma/client";
+import { RequestStatus, UserRole } from "@prisma/client";
+import { db } from "@/lib/db";
 import { 
   sendProcessingReminderEmail, 
   sendDailySummaryEmail, 
   getRequestTypeDisplayName,
   ADMIN_EMAIL 
 } from "@/lib/email";
-
-const prisma = new PrismaClient();
 
 // Cron secret for authentication
 const CRON_SECRET = process.env.CRON_SECRET || "your-cron-secret-key";
@@ -121,7 +120,7 @@ async function handleProcessingReminders(): Promise<NextResponse> {
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
     
     // Find requests that have been in PROCESSING status for more than 3 days
-    const overdueRequests = await prisma.request.findMany({
+    const overdueRequests = await db.request.findMany({
       where: {
         status: RequestStatus.PROCESSING,
         createdAt: {
@@ -229,19 +228,19 @@ async function handleDailySummary(): Promise<NextResponse> {
       recentRequests,
     ] = await Promise.all([
       // New requests today
-      prisma.request.count({
+      db.request.count({
         where: {
           createdAt: { gte: startOfDay, lt: endOfDay },
         },
       }),
       
       // Currently in processing
-      prisma.request.count({
+      db.request.count({
         where: { status: RequestStatus.PROCESSING },
       }),
       
       // Issued today
-      prisma.request.count({
+      db.request.count({
         where: {
           certificateIssuedAt: { gte: startOfDay, lt: endOfDay },
           status: RequestStatus.ISSUED,
@@ -249,12 +248,12 @@ async function handleDailySummary(): Promise<NextResponse> {
       }),
       
       // On hold
-      prisma.request.count({
+      db.request.count({
         where: { status: RequestStatus.HOLD },
       }),
       
       // Rejected today
-      prisma.request.count({
+      db.request.count({
         where: {
           status: RequestStatus.REJECTED,
           updatedAt: { gte: startOfDay, lt: endOfDay },
@@ -262,14 +261,14 @@ async function handleDailySummary(): Promise<NextResponse> {
       }),
       
       // Total pending (NEW + PROCESSING)
-      prisma.request.count({
+      db.request.count({
         where: {
           status: { in: [RequestStatus.NEW, RequestStatus.PROCESSING] },
         },
       }),
       
       // Overdue requests (processing > 3 days)
-      prisma.request.count({
+      db.request.count({
         where: {
           status: RequestStatus.PROCESSING,
           createdAt: {
@@ -279,7 +278,7 @@ async function handleDailySummary(): Promise<NextResponse> {
       }),
       
       // Recent requests for display
-      prisma.request.findMany({
+      db.request.findMany({
         where: {
           createdAt: { gte: startOfDay, lt: endOfDay },
         },
@@ -314,7 +313,7 @@ async function handleDailySummary(): Promise<NextResponse> {
     }));
     
     // Get all admin and super admin users
-    const admins = await prisma.user.findMany({
+    const admins = await db.user.findMany({
       where: {
         role: { in: [UserRole.ADMIN, UserRole.SUPER_ADMIN] },
         status: "ACTIVE",

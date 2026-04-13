@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 // GET - Fetch all templates or filter by type
 export async function GET(request: NextRequest) {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
 // POST - Create a new template
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
 // PUT - Update a template
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -214,7 +215,7 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete a template (soft delete by setting isActive to false)
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return NextResponse.json(

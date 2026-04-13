@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { db } from "@/lib/db";
 
 // GET - Track a request by control number or tracking token
 export async function GET(request: NextRequest) {
@@ -24,7 +22,7 @@ export async function GET(request: NextRequest) {
       where.trackingToken = trackingToken;
     }
 
-    const req = await prisma.request.findFirst({
+    const req = await db.request.findFirst({
       where,
       select: {
         controlNumber: true,

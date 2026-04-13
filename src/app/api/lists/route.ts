@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 // GET - Get managed lists (colleges, purposes, etc.)
 export async function GET(request: NextRequest) {
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
 // POST - Add a new list item
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
 // PUT - Update a list item or reorder items
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -148,7 +149,7 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete a list item (soft delete)
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return NextResponse.json(

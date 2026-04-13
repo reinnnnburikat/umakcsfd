@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient, RequestStatus, RequestType } from "@prisma/client";
+import { RequestStatus, RequestType } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { generateControlNumber, generateTrackingToken, generateQRCode, addMonths } from "@/lib/utils";
 import { sendRequestConfirmationEmail, getRequestTypeDisplayName } from "@/lib/email";
 import { notifyAdminsNewRequest } from "@/lib/notifications";
-
-const prisma = new PrismaClient();
 
 // GET - List all requests
 export async function GET(request: NextRequest) {
@@ -42,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [requests, total] = await Promise.all([
-      prisma.request.findMany({
+      db.request.findMany({
         where,
         orderBy: { createdAt: "desc" },
         skip,
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      prisma.request.count({ where }),
+      db.request.count({ where }),
     ]);
 
     return NextResponse.json({
@@ -114,7 +113,7 @@ export async function POST(request: NextRequest) {
     const qrCode = generateQRCode();
 
     // Create the request
-    const newRequest = await prisma.request.create({
+    const newRequest = await db.request.create({
       data: {
         controlNumber,
         requestType: requestType as RequestType,
@@ -155,7 +154,7 @@ export async function POST(request: NextRequest) {
     }).then(result => {
       if (result.success) {
         // Update email sent timestamp
-        prisma.request.update({
+        db.request.update({
           where: { id: newRequest.id },
           data: { emailSentAt: new Date() },
         }).catch(err => console.error("Failed to update emailSentAt:", err));
@@ -219,7 +218,7 @@ export async function PUT(request: NextRequest) {
 
     // Update all requests
     const updatePromises = requestIds.map(async (id) => {
-      const updatedRequest = await prisma.request.update({
+      const updatedRequest = await db.request.update({
         where: { id },
         data: updateData,
         include: {
@@ -230,7 +229,7 @@ export async function PUT(request: NextRequest) {
       });
 
       // Create audit log for each request
-      await prisma.auditLog.create({
+      await db.auditLog.create({
         data: {
           userId: session.user.id,
           userName: session.user.name || "Unknown",

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient, ComplaintStatus, ComplaintCategory } from "@prisma/client";
+import { ComplaintStatus, ComplaintCategory } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
+import { db } from "@/lib/db";
 import { generateControlNumber, generateTrackingToken } from "@/lib/utils";
-
-const prisma = new PrismaClient();
 
 // GET - List all complaints
 export async function GET(request: NextRequest) {
@@ -41,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     const [complaints, total] = await Promise.all([
-      prisma.complaint.findMany({
+      db.complaint.findMany({
         where,
         orderBy: { createdAt: "desc" },
         skip,
@@ -52,7 +51,7 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
-      prisma.complaint.count({ where }),
+      db.complaint.count({ where }),
     ]);
 
     return NextResponse.json({
@@ -95,7 +94,7 @@ export async function POST(request: NextRequest) {
     const controlNumber = generateControlNumber("CMP");
     const trackingToken = generateTrackingToken();
 
-    const newComplaint = await prisma.complaint.create({
+    const newComplaint = await db.complaint.create({
       data: {
         controlNumber,
         complainants: JSON.stringify(complainants),

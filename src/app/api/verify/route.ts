@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { db } from "@/lib/db";
 
 // GET - Verify a certificate by QR code
 export async function GET(request: NextRequest) {
@@ -16,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const req = await prisma.request.findFirst({
+    const req = await db.request.findFirst({
       where: { qrCode: code },
       select: {
         controlNumber: true,
