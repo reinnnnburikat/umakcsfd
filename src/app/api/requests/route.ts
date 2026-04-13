@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { PrismaClient, RequestStatus, RequestType } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { generateControlNumber, generateTrackingToken, generateQRCode, addMonths } from "@/lib/utils";
+import { sendRequestConfirmationEmail, getRequestTypeDisplayName } from "@/lib/email";
+import { notifyAdminsNewRequest } from "@/lib/notifications";
 
 const prisma = new PrismaClient();
 
@@ -19,7 +21,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     
     if (status && status !== "ALL") {
       where.status = status as RequestStatus;
@@ -31,11 +33,11 @@ export async function GET(request: NextRequest) {
     
     if (search) {
       where.OR = [
-        { controlNumber: { contains: search } },
-        { requestorFirstName: { contains: search } },
-        { requestorLastName: { contains: search } },
-        { requestorEmail: { contains: search } },
-        { requestorStudentNo: { contains: search } },
+        { controlNumber: { contains: search, mode: "insensitive" } },
+        { requestorFirstName: { contains: search, mode: "insensitive" } },
+        { requestorLastName: { contains: search, mode: "insensitive" } },
+        { requestorEmail: { contains: search, mode: "insensitive" } },
+        { requestorStudentNo: { contains: search, mode: "insensitive" } },
       ];
     }
 
@@ -97,12 +99,21 @@ export async function POST(request: NextRequest) {
       documents,
     } = body;
 
+    // Validate required fields
+    if (!requestType || !requestorFirstName || !requestorLastName || !requestorEmail || !requestorStudentNo) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
+
     // Generate control number and tracking token
     const prefix = requestType as string;
     const controlNumber = generateControlNumber(prefix);
     const trackingToken = generateTrackingToken();
     const qrCode = generateQRCode();
 
+    // Create the request
     const newRequest = await prisma.request.create({
       data: {
         controlNumber,
@@ -130,10 +141,37 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Send confirmation email (async, don't wait for it)
+    const requestorFullName = `${requestorFirstName} ${requestorMiddleName ? requestorMiddleName + ' ' : ''}${requestorLastName}${requestorExtensionName ? ' ' + requestorExtensionName : ''}`;
+    const requestTypeName = getRequestTypeDisplayName(requestType);
+    
+    // Send email in background (don't block the response)
+    sendRequestConfirmationEmail(requestorEmail, {
+      controlNumber,
+      requestType: requestTypeName,
+      requestorName: requestorFullName,
+      trackingToken,
+      estimatedDays: getRequestTypeEstimatedDays(requestType),
+    }).then(result => {
+      if (result.success) {
+        // Update email sent timestamp
+        prisma.request.update({
+          where: { id: newRequest.id },
+          data: { emailSentAt: new Date() },
+        }).catch(err => console.error("Failed to update emailSentAt:", err));
+      }
+    }).catch(err => {
+      console.error("Failed to send confirmation email:", err);
+    });
+
+    // Notify admins about the new request (async, don't wait)
+    notifyAdminsNewRequest(controlNumber, requestTypeName, requestorFullName)
+      .catch(err => console.error("Failed to notify admins:", err));
+
     return NextResponse.json({
       success: true,
       data: newRequest,
-      message: "Request submitted successfully",
+      message: "Request submitted successfully. A confirmation email will be sent to " + requestorEmail,
     });
   } catch (error) {
     console.error("Error creating request:", error);
@@ -142,4 +180,93 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// PUT - Batch update requests (for admin operations)
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { requestIds, status, remarks } = body;
+
+    if (!requestIds || !Array.isArray(requestIds) || requestIds.length === 0) {
+      return NextResponse.json({ error: "No request IDs provided" }, { status: 400 });
+    }
+
+    if (!status) {
+      return NextResponse.json({ error: "Status is required" }, { status: 400 });
+    }
+
+    const updateData: Record<string, unknown> = {
+      status: status as RequestStatus,
+      processedBy: session.user.id,
+      processedAt: new Date(),
+    };
+
+    if (remarks) {
+      updateData.remarks = remarks;
+    }
+
+    // If issuing, set certificate dates
+    if (status === "ISSUED") {
+      updateData.certificateIssuedAt = new Date();
+      updateData.certificateExpiresAt = addMonths(new Date(), 6);
+    }
+
+    // Update all requests
+    const updatePromises = requestIds.map(async (id) => {
+      const updatedRequest = await prisma.request.update({
+        where: { id },
+        data: updateData,
+        include: {
+          processor: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      });
+
+      // Create audit log for each request
+      await prisma.auditLog.create({
+        data: {
+          userId: session.user.id,
+          userName: session.user.name || "Unknown",
+          action: `REQUEST_${status}`,
+          module: "REQUESTS",
+          recordId: id,
+          newValue: JSON.stringify(updatedRequest),
+        },
+      });
+
+      return updatedRequest;
+    });
+
+    const updatedRequests = await Promise.all(updatePromises);
+
+    return NextResponse.json({
+      success: true,
+      data: updatedRequests,
+      message: `${updatedRequests.length} request(s) updated successfully`,
+    });
+  } catch (error) {
+    console.error("Error batch updating requests:", error);
+    return NextResponse.json(
+      { error: "Failed to update requests" },
+      { status: 500 }
+    );
+  }
+}
+
+// Helper function to get estimated processing days by request type
+function getRequestTypeEstimatedDays(requestType: string): number {
+  const estimates: Record<string, number> = {
+    GMC: 3,
+    UER: 2,
+    CDC: 2,
+    CAC: 3,
+  };
+  return estimates[requestType] || 3;
 }

@@ -60,14 +60,14 @@ enum TemplateType {
 }
 
 model User {
-  id            String      @id @default(cuid())
-  email         String      @unique
+  id            String        @id @default(cuid())
+  email         String        @unique
   password      String
   name          String?
-  role          UserRole    @default(STAFF)
-  status        UserStatus  @default(ACTIVE)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  role          UserRole      @default(STAFF)
+  status        UserStatus    @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   lastLoginAt   DateTime?
   
   // Relations
@@ -76,6 +76,24 @@ model User {
   announcements Announcement[]
   auditLogs     AuditLog[]
   templates     Template[]
+  notifications Notification[]
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String?  // null for broadcast notifications
+  title       String
+  message     String
+  type        String   // info, success, warning, error
+  link        String?  // optional link to related record
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
 }
 
 model Profile {

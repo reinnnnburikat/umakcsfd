@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "next-themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { NotificationProvider } from "@/components/notifications/notification-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -27,7 +28,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <NotificationProvider pollingInterval={30000}>
+            {children}
+          </NotificationProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </SessionProvider>
