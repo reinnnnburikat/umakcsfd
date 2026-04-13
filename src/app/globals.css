@@ -42,12 +42,13 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   
-  /* iCSFD+ Custom Colors */
-  --color-csfd-primary: var(--csfd-primary);
-  --color-csfd-secondary: var(--csfd-secondary);
-  --color-csfd-accent: var(--csfd-accent);
-  --color-csfd-gold: var(--csfd-gold);
+  /* CSFD Custom Colors - Navy Blue & Gold Theme */
   --color-csfd-navy: var(--csfd-navy);
+  --color-csfd-gold: var(--csfd-gold);
+  --color-csfd-header: var(--csfd-header);
+  --color-csfd-dark: var(--csfd-dark);
+  --color-csfd-success: var(--csfd-success);
+  --color-csfd-danger: var(--csfd-danger);
 }
 
 :root {
@@ -58,79 +59,97 @@
   --card-foreground: oklch(0.2 0.02 250);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.2 0.02 250);
-  --primary: oklch(0.55 0.2 30);
+  
+  /* Primary: Navy Blue #111c4e */
+  --primary: oklch(0.30 0.08 260);
   --primary-foreground: oklch(0.99 0 0);
+  
   --secondary: oklch(0.96 0.01 250);
   --secondary-foreground: oklch(0.2 0.02 250);
   --muted: oklch(0.96 0.01 250);
   --muted-foreground: oklch(0.5 0.02 250);
-  --accent: oklch(0.65 0.18 50);
-  --accent-foreground: oklch(0.2 0.02 250);
+  
+  /* Accent: Gold #ffc400 */
+  --accent: oklch(0.85 0.15 85);
+  --accent-foreground: oklch(0.20 0.08 260);
+  
   --destructive: oklch(0.55 0.22 25);
   --border: oklch(0.9 0.01 250);
   --input: oklch(0.9 0.01 250);
-  --ring: oklch(0.55 0.2 30);
-  --chart-1: oklch(0.55 0.2 30);
-  --chart-2: oklch(0.65 0.18 50);
+  --ring: oklch(0.30 0.08 260);
+  
+  --chart-1: oklch(0.30 0.08 260);
+  --chart-2: oklch(0.85 0.15 85);
   --chart-3: oklch(0.7 0.15 160);
   --chart-4: oklch(0.6 0.2 280);
   --chart-5: oklch(0.65 0.15 200);
+  
   --sidebar: oklch(0.98 0.01 250);
   --sidebar-foreground: oklch(0.2 0.02 250);
-  --sidebar-primary: oklch(0.55 0.2 30);
+  --sidebar-primary: oklch(0.30 0.08 260);
   --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.96 0.01 250);
   --sidebar-accent-foreground: oklch(0.2 0.02 250);
   --sidebar-border: oklch(0.9 0.01 250);
-  --sidebar-ring: oklch(0.55 0.2 30);
+  --sidebar-ring: oklch(0.30 0.08 260);
   
-  /* iCSFD+ Colors */
-  --csfd-primary: oklch(0.55 0.2 30);
-  --csfd-secondary: oklch(0.65 0.18 50);
-  --csfd-accent: oklch(0.7 0.15 160);
-  --csfd-gold: oklch(0.8 0.15 80);
-  --csfd-navy: oklch(0.3 0.08 250);
+  /* CSFD Theme Colors */
+  --csfd-navy: #111c4e;
+  --csfd-gold: #ffc400;
+  --csfd-header: #3d3d3d;
+  --csfd-dark: #000B3C;
+  --csfd-success: #1F9E55;
+  --csfd-danger: #dc2626;
 }
 
 .dark {
-  --background: oklch(0.15 0.02 250);
+  --background: oklch(0.12 0.02 250);
   --foreground: oklch(0.95 0.01 250);
-  --card: oklch(0.2 0.02 250);
+  --card: oklch(0.18 0.02 250);
   --card-foreground: oklch(0.95 0.01 250);
-  --popover: oklch(0.2 0.02 250);
+  --popover: oklch(0.18 0.02 250);
   --popover-foreground: oklch(0.95 0.01 250);
-  --primary: oklch(0.65 0.18 50);
-  --primary-foreground: oklch(0.15 0.02 250);
+  
+  /* Primary: Navy Blue #111c4e */
+  --primary: oklch(0.35 0.10 260);
+  --primary-foreground: oklch(0.99 0 0);
+  
   --secondary: oklch(0.25 0.02 250);
   --secondary-foreground: oklch(0.95 0.01 250);
   --muted: oklch(0.25 0.02 250);
   --muted-foreground: oklch(0.65 0.02 250);
-  --accent: oklch(0.65 0.18 50);
-  --accent-foreground: oklch(0.15 0.02 250);
+  
+  /* Accent: Gold #ffc400 */
+  --accent: oklch(0.80 0.15 85);
+  --accent-foreground: oklch(0.20 0.08 260);
+  
   --destructive: oklch(0.55 0.22 25);
   --border: oklch(0.3 0.02 250);
   --input: oklch(0.3 0.02 250);
-  --ring: oklch(0.65 0.18 50);
-  --chart-1: oklch(0.65 0.18 50);
-  --chart-2: oklch(0.7 0.15 160);
-  --chart-3: oklch(0.55 0.2 30);
+  --ring: oklch(0.35 0.10 260);
+  
+  --chart-1: oklch(0.35 0.10 260);
+  --chart-2: oklch(0.80 0.15 85);
+  --chart-3: oklch(0.7 0.15 160);
   --chart-4: oklch(0.6 0.2 280);
   --chart-5: oklch(0.65 0.15 200);
-  --sidebar: oklch(0.18 0.02 250);
+  
+  --sidebar: oklch(0.15 0.02 250);
   --sidebar-foreground: oklch(0.95 0.01 250);
-  --sidebar-primary: oklch(0.65 0.18 50);
-  --sidebar-primary-foreground: oklch(0.15 0.02 250);
+  --sidebar-primary: oklch(0.35 0.10 260);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.25 0.02 250);
   --sidebar-accent-foreground: oklch(0.95 0.01 250);
   --sidebar-border: oklch(0.3 0.02 250);
-  --sidebar-ring: oklch(0.65 0.18 50);
+  --sidebar-ring: oklch(0.35 0.10 260);
   
-  /* iCSFD+ Colors Dark */
-  --csfd-primary: oklch(0.65 0.18 50);
-  --csfd-secondary: oklch(0.7 0.15 160);
-  --csfd-accent: oklch(0.55 0.2 30);
-  --csfd-gold: oklch(0.8 0.15 80);
-  --csfd-navy: oklch(0.12 0.05 250);
+  /* CSFD Theme Colors Dark */
+  --csfd-navy: #0a1028;
+  --csfd-gold: #ffc400;
+  --csfd-header: #2a2a2a;
+  --csfd-dark: #000620;
+  --csfd-success: #1F9E55;
+  --csfd-danger: #dc2626;
 }
 
 @layer base {
@@ -178,6 +197,35 @@
 
 .dark .glass {
   background: rgba(30, 30, 46, 0.7);
+}
+
+/* CSFD Custom Classes */
+.bg-csfd-navy {
+  background-color: var(--csfd-navy);
+}
+
+.bg-csfd-gold {
+  background-color: var(--csfd-gold);
+}
+
+.bg-csfd-header {
+  background-color: var(--csfd-header);
+}
+
+.bg-csfd-dark {
+  background-color: var(--csfd-dark);
+}
+
+.text-csfd-navy {
+  color: var(--csfd-navy);
+}
+
+.text-csfd-gold {
+  color: var(--csfd-gold);
+}
+
+.border-csfd-navy {
+  border-color: var(--csfd-navy);
 }
 
 /* Status badges */
@@ -271,7 +319,8 @@
 }
 
 .stepper-circle.active {
-  @apply bg-primary text-primary-foreground;
+  background-color: var(--csfd-navy);
+  color: white;
 }
 
 .stepper-circle.completed {
@@ -287,9 +336,41 @@
 }
 
 .stepper-line.active {
-  @apply bg-primary;
+  background-color: var(--csfd-navy);
 }
 
 .stepper-line.inactive {
   @apply bg-muted;
+}
+
+/* Form input styling */
+.input-csfd {
+  @apply w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2;
+  border-color: var(--csfd-navy);
+}
+
+.input-csfd:focus {
+  border-color: var(--csfd-gold);
+}
+
+/* Button styling */
+.btn-csfd-primary {
+  @apply px-8 py-3 rounded-lg font-medium text-white transition-opacity hover:opacity-90;
+  background-color: var(--csfd-navy);
+}
+
+.btn-csfd-gold {
+  @apply px-8 py-3 rounded-lg font-medium transition-opacity hover:opacity-90;
+  background-color: var(--csfd-gold);
+  color: var(--csfd-navy);
+}
+
+.btn-csfd-success {
+  @apply px-8 py-3 rounded-lg font-medium text-white transition-opacity hover:opacity-90;
+  background-color: var(--csfd-success);
+}
+
+.btn-csfd-danger {
+  @apply px-8 py-3 rounded-lg font-medium text-white transition-opacity hover:opacity-90;
+  background-color: var(--csfd-danger);
 }

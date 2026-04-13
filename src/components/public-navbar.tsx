@@ -2,36 +2,21 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Menu, User, LogOut, LayoutDashboard, FileText } from "lucide-react";
+import Image from "next/image";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/track", label: "Track Request" },
-  { href: "/verify", label: "Verify Certificate" },
-  { href: "/about", label: "About" },
-  { href: "/faq", label: "FAQ" },
+const menuItems = [
+  { label: "HOME", path: "/" },
+  { label: "SERVICES", path: "/services" },
+  { label: "ABOUT", path: "/about" },
+  { label: "FAQs", path: "/faq" },
 ];
 
 export function PublicNavbar() {
   const { data: session, status } = useSession();
-  const [isOpen, setIsOpen] = useState(false);
+  const router = useRouter();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const getDashboardLink = () => {
     if (!session?.user?.role) return "/auth/login";
@@ -46,151 +31,148 @@ export function PublicNavbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4 mx-auto">
-        {/* Logo */}
-        <Link href="/" className="flex items-center space-x-3">
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-lg">
-              i+
-            </div>
-            <div className="hidden sm:block">
-              <div className="font-bold text-lg leading-tight text-foreground">
-                iCSFD+
-              </div>
-              <div className="text-xs text-muted-foreground leading-tight">
-                UMak Student Services
-              </div>
-            </div>
-          </div>
-        </Link>
+    <div>
+      {/* Header */}
+      <header
+        className="flex justify-between items-center px-6 md:px-12 py-4 shadow-md sticky top-0 z-30"
+        style={{ backgroundColor: "#3d3d3d" }}
+      >
+        <div className="flex items-center gap-3 md:gap-4">
+          <Image
+            src="/logos/UMAK LOGO.png"
+            alt="UMak Logo"
+            width={48}
+            height={48}
+            className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+          />
+          <Image
+            src="/logos/CSFD LOGO.png"
+            alt="CSFD Logo"
+            width={48}
+            height={48}
+            className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
+          />
+          <span className="hidden sm:block text-sm md:text-lg text-white">
+            Center for Student Formation and Discipline
+          </span>
+        </div>
 
-        {/* Desktop Nav Links */}
-        <nav className="hidden md:flex items-center gap-1">
-          {navLinks.map((link) => (
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-6">
+          {menuItems.map((item) => (
             <Link
-              key={link.href}
-              href={link.href}
-              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted"
+              key={item.path}
+              href={item.path}
+              className="text-white font-medium hover:opacity-80 transition-opacity"
             >
-              {link.label}
+              {item.label}
             </Link>
           ))}
+          {status === "authenticated" && session?.user ? (
+            <button
+              onClick={() => router.push(getDashboardLink())}
+              className="text-white font-medium hover:opacity-80 transition-opacity"
+            >
+              DASHBOARD
+            </button>
+          ) : (
+            <Link
+              href="/auth/login"
+              className="text-white font-medium hover:opacity-80 transition-opacity"
+            >
+              LOG IN
+            </Link>
+          )}
         </nav>
 
-        {/* Right Side Actions */}
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+        {/* Hamburger Menu Button */}
+        <button
+          className="p-2 hover:bg-white/10 rounded-lg transition-colors md:hidden"
+          onClick={() => setIsMenuOpen(true)}
+        >
+          <div className="w-6 h-5 flex flex-col justify-between">
+            <span className="w-full h-0.5 bg-white"></span>
+            <span className="w-full h-0.5 bg-white"></span>
+            <span className="w-full h-0.5 bg-white"></span>
+          </div>
+        </button>
+      </header>
 
-          {status === "authenticated" && session?.user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">{session.user.name}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem asChild>
-                  <Link href={getDashboardLink()} className="gap-2">
-                    <LayoutDashboard className="h-4 w-4" />
-                    Dashboard
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="gap-2">
-                    <User className="h-4 w-4" />
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="gap-2 text-red-600 focus:text-red-600"
-                  onClick={() => signOut({ callbackUrl: "/" })}
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <div className="hidden md:flex items-center gap-2">
-              <Button variant="ghost" asChild>
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
-              <Button asChild className="bg-orange-500 hover:bg-orange-600">
-                <Link href="/services/gmc">Request Certificate</Link>
-              </Button>
+      {/* Slide-in Menu */}
+      <div
+        className={`fixed top-0 right-0 h-full w-72 transition-transform duration-300 ease-in-out z-50 ${
+          isMenuOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        style={{ backgroundColor: "#111c4e" }}
+      >
+        <div className="flex justify-end p-4">
+          <button
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            <div className="w-6 h-5 flex flex-col justify-between">
+              <span className="w-full h-0.5 bg-white rotate-45 translate-y-2"></span>
+              <span className="w-full h-0.5 bg-white opacity-0"></span>
+              <span className="w-full h-0.5 bg-white -rotate-45 -translate-y-2"></span>
             </div>
+          </button>
+        </div>
+        <div className="px-6 py-4">
+          {menuItems.map((item, index) => (
+            <button
+              key={index}
+              className="w-full text-right py-3 border-b border-white/20 text-white hover:text-yellow-400 transition-colors font-medium text-base"
+              onClick={() => {
+                router.push(item.path);
+                setIsMenuOpen(false);
+              }}
+            >
+              {item.label}
+            </button>
+          ))}
+          
+          {status === "authenticated" && session?.user ? (
+            <>
+              <button
+                className="w-full text-right py-3 border-b border-white/20 text-white hover:text-yellow-400 transition-colors font-medium text-base"
+                onClick={() => {
+                  router.push(getDashboardLink());
+                  setIsMenuOpen(false);
+                }}
+              >
+                DASHBOARD
+              </button>
+              <button
+                className="w-full text-right py-3 border-b border-white/20 text-red-400 hover:text-red-300 transition-colors font-medium text-base"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  signOut({ callbackUrl: "/" });
+                }}
+              >
+                LOGOUT
+              </button>
+            </>
+          ) : (
+            <button
+              className="w-full text-right py-3 border-b border-white/20 text-white hover:text-yellow-400 transition-colors font-medium text-base"
+              onClick={() => {
+                router.push("/auth/login");
+                setIsMenuOpen(false);
+              }}
+            >
+              LOG IN
+            </button>
           )}
-
-          {/* Mobile Menu */}
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild className="md:hidden">
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-              <SheetHeader>
-                <SheetTitle className="text-left">Menu</SheetTitle>
-              </SheetHeader>
-              <div className="flex flex-col gap-4 mt-6">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className="px-4 py-3 text-base font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-                <div className="border-t pt-4 mt-2">
-                  {status === "authenticated" && session?.user ? (
-                    <>
-                      <Link
-                        href={getDashboardLink()}
-                        onClick={() => setIsOpen(false)}
-                        className="px-4 py-3 text-base font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted flex items-center gap-2"
-                      >
-                        <LayoutDashboard className="h-4 w-4" />
-                        Dashboard
-                      </Link>
-                      <button
-                        onClick={() => {
-                          setIsOpen(false);
-                          signOut({ callbackUrl: "/" });
-                        }}
-                        className="w-full px-4 py-3 text-base font-medium text-red-600 hover:text-red-700 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950 flex items-center gap-2"
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Sign Out
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-start mb-2"
-                        asChild
-                      >
-                        <Link href="/auth/login">Sign In</Link>
-                      </Button>
-                      <Button
-                        className="w-full bg-orange-500 hover:bg-orange-600"
-                        asChild
-                      >
-                        <Link href="/services/gmc">Request Certificate</Link>
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
         </div>
       </div>
-    </header>
+
+      {/* Overlay */}
+      {isMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsMenuOpen(false)}
+        ></div>
+      )}
+    </div>
   );
 }

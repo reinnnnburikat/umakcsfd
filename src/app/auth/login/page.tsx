@@ -4,20 +4,8 @@ import React, { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Lock, Loader2, AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 function LoginFormContent() {
   const router = useRouter();
@@ -43,10 +31,9 @@ function LoginFormContent() {
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
       } else {
-        // Get the user's role to redirect appropriately
         const response = await fetch("/api/auth/session");
         const session = await response.json();
-        
+
         if (session?.user) {
           switch (session.user.role) {
             case "SUPER_ADMIN":
@@ -70,158 +57,178 @@ function LoginFormContent() {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <CardContent className="space-y-4">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <div className="relative">
-            <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="pl-10"
-              required
-            />
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="pl-10"
-              required
-            />
-          </div>
-        </div>
+    <form onSubmit={handleSubmit} className="w-full max-w-md px-8">
+      <h2
+        className="text-3xl md:text-4xl font-bold mb-8 text-center"
+        style={{ color: "#111c4e" }}
+      >
+        LOGIN
+      </h2>
 
-        <div className="flex items-center justify-end">
-          <Link
-            href="/auth/forgot-password"
-            className="text-sm text-orange-500 hover:text-orange-600"
-          >
-            Forgot password?
-          </Link>
+      {error && (
+        <div className="mb-6 p-4 rounded-lg flex items-center gap-2" style={{ backgroundColor: "#fef2f2", color: "#dc2626" }}>
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-sm">{error}</span>
         </div>
-      </CardContent>
-      
-      <CardFooter className="flex flex-col gap-4">
-        <Button
-          type="submit"
-          className="w-full bg-orange-500 hover:bg-orange-600"
-          disabled={isLoading}
+      )}
+
+      <div className="mb-6">
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </span>
+          <input
+            type="text"
+            placeholder="Enter your username"
+            className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{ borderColor: "#111c4e" }}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <div className="relative">
+          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </span>
+          <input
+            type="password"
+            placeholder="Enter your password"
+            className="w-full pl-12 pr-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{ borderColor: "#111c4e" }}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="mb-6 text-right">
+        <Link
+          href="/auth/forgot-password"
+          className="text-sm hover:opacity-80 transition-opacity"
+          style={{ color: "#111c4e" }}
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
-            </>
-          ) : (
-            "Sign In"
-          )}
-        </Button>
-        
-        <div className="text-center text-sm text-muted-foreground">
-          <Link
-            href="/"
-            className="text-orange-500 hover:text-orange-600"
-          >
-            ← Back to Home
-          </Link>
-        </div>
-      </CardFooter>
+          Forgot password?
+        </Link>
+      </div>
+
+      <button
+        type="submit"
+        className="w-full py-3 rounded-lg font-medium text-white mb-6 hover:opacity-90 transition-opacity disabled:opacity-50"
+        style={{ backgroundColor: "#111c4e" }}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <span className="flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Signing in...
+          </span>
+        ) : (
+          "Submit"
+        )}
+      </button>
+
+      <div className="flex items-center mb-6">
+        <div className="flex-1 border-t border-gray-300"></div>
+        <span className="px-4 text-gray-500 text-sm">or</span>
+        <div className="flex-1 border-t border-gray-300"></div>
+      </div>
+
+      <div className="text-center">
+        <span className="text-gray-600">No account yet? </span>
+        <Link
+          href="/"
+          className="px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-opacity inline-block mt-2"
+          style={{ backgroundColor: "#6c757d", color: "white" }}
+        >
+          Back to Home
+        </Link>
+      </div>
     </form>
   );
 }
 
 function LoginFormSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <div className="h-4 w-12 bg-muted rounded animate-pulse" />
-        <div className="h-10 w-full bg-muted rounded animate-pulse" />
+    <div className="w-full max-w-md px-8">
+      <div className="h-10 w-24 bg-muted rounded animate-pulse mx-auto mb-8" />
+      <div className="space-y-6">
+        <div className="h-12 bg-muted rounded animate-pulse" />
+        <div className="h-12 bg-muted rounded animate-pulse" />
+        <div className="h-12 bg-muted rounded animate-pulse" />
       </div>
-      <div className="space-y-2">
-        <div className="h-4 w-16 bg-muted rounded animate-pulse" />
-        <div className="h-10 w-full bg-muted rounded animate-pulse" />
-      </div>
-      <div className="h-10 w-full bg-muted rounded animate-pulse" />
     </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 text-white p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-0 bg-[url('/umak-building.svg')] bg-cover bg-center opacity-20" />
-        
-        <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center text-white font-bold text-xl">
-              i+
-            </div>
-            <div>
-              <div className="font-bold text-xl">iCSFD+</div>
-              <div className="text-sm text-white/80">UMak Student Services</div>
-            </div>
-          </Link>
-        </div>
-
-        <div className="relative z-10">
-          <h1 className="text-4xl font-bold mb-4">Welcome back, Heron!</h1>
-          <p className="text-lg text-white/90">
-            Access your dashboard to manage requests, process certificates,
-            and serve the UMak community.
-          </p>
-        </div>
-
-        <div className="relative z-10 text-sm text-white/70">
-          University of Makati. University of Character.
+    <div className="fixed inset-0 z-50 flex">
+      {/* Left Side - Welcome Section */}
+      <div
+        className="hidden lg:block lg:w-[30%] relative"
+        style={{ backgroundColor: "#111c4e" }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: "url('/images/elementfull.png')",
+            backgroundSize: "contain",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        ></div>
+        <div className="flex items-center justify-start h-full px-8 relative z-10">
+          <div className="text-left text-white">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Welcome back,</h1>
+            <h2
+              className="text-3xl md:text-4xl font-bold mb-4"
+              style={{ color: "#ffc400" }}
+            >
+              Heron!
+            </h2>
+            <p className="text-base font-light">
+              University of Makati. University of Character.
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Right Side - Login Form */}
-      <div className="flex-1 flex flex-col p-8">
-        <div className="flex justify-end mb-8">
-          <ThemeToggle />
+      {/* Right Side - Login Section */}
+      <div
+        className="flex-1 bg-gray-100 flex items-center justify-center relative"
+        style={{ backgroundColor: "#f5f5f5" }}
+      >
+        {/* Home Link */}
+        <div className="absolute top-6 right-6">
+          <Link
+            href="/"
+            className="text-sm font-medium hover:opacity-80 transition-opacity"
+            style={{ color: "#111c4e" }}
+          >
+            ← Back to Home
+          </Link>
         </div>
 
-        <div className="flex-1 flex items-center justify-center">
-          <Card className="w-full max-w-md">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-              <CardDescription>
-                Enter your credentials to access your account
-              </CardDescription>
-            </CardHeader>
-            <Suspense fallback={<LoginFormSkeleton />}>
-              <LoginFormContent />
-            </Suspense>
-          </Card>
-        </div>
-
-        <div className="text-center text-sm text-muted-foreground">
-          Demo accounts available for testing
-        </div>
+        <Suspense fallback={<LoginFormSkeleton />}>
+          <LoginFormContent />
+        </Suspense>
       </div>
     </div>
   );

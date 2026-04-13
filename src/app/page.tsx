@@ -2,397 +2,367 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  FileCheck,
-  Shirt,
-  Users,
-  BadgeCheck,
-  MessageSquareWarning,
-  Clock,
-  CheckCircle2,
-  Search,
-  ShieldCheck,
-  ArrowRight,
-  Megaphone,
-} from "lucide-react";
-
-const services = [
-  {
-    title: "Good Moral Certificate",
-    description: "Request a certificate of good moral character for employment, scholarship, or other purposes.",
-    icon: FileCheck,
-    href: "/services/gmc",
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10",
-  },
-  {
-    title: "Uniform Exemption",
-    description: "Apply for exemption from wearing the prescribed uniform due to medical or religious reasons.",
-    icon: Shirt,
-    href: "/services/uer",
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-  },
-  {
-    title: "Cross-Dressing Clearance",
-    description: "Request clearance for cross-dressing for events, performances, or other activities.",
-    icon: BadgeCheck,
-    href: "/services/cdc",
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-  },
-  {
-    title: "Child Admission",
-    description: "Request clearance for bringing children to the university campus.",
-    icon: Users,
-    href: "/services/cac",
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-  },
-  {
-    title: "File a Complaint",
-    description: "Report incidents or file complaints related to student conduct and discipline.",
-    icon: MessageSquareWarning,
-    href: "/complaint",
-    color: "text-red-500",
-    bgColor: "bg-red-500/10",
-  },
-  {
-    title: "Track Request",
-    description: "Check the status of your submitted requests using your control number.",
-    icon: Search,
-    href: "/track",
-    color: "text-amber-500",
-    bgColor: "bg-amber-500/10",
-  },
-];
-
-const steps = [
-  {
-    step: 1,
-    title: "Submit Request",
-    description: "Fill out the online form with your details and upload required documents.",
-  },
-  {
-    step: 2,
-    title: "Wait for Processing",
-    description: "Our staff will review your request during office hours (Mon-Fri, 8AM-5PM).",
-  },
-  {
-    step: 3,
-    title: "Receive Updates",
-    description: "Get email notifications about your request status and any updates.",
-  },
-  {
-    step: 4,
-    title: "Download Certificate",
-    description: "Once approved, download your certificate directly from the portal.",
-  },
-];
 
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
-      <PublicNavbar />
+      {/* Header */}
+      <header
+        className="flex justify-between items-center px-6 md:px-12 py-4 shadow-md"
+        style={{ backgroundColor: "#111c4e" }}
+      >
+        <div className="flex items-center gap-3 md:gap-4">
+          <Image
+            src="/logos/UMAK LOGO.png"
+            alt="UMak Logo"
+            width={60}
+            height={60}
+            className="w-12 h-12 md:w-15 md:h-15 rounded-full object-cover"
+          />
+          <Image
+            src="/logos/CSFD LOGO.png"
+            alt="CSFD Logo"
+            width={60}
+            height={60}
+            className="w-12 h-12 md:w-15 md:h-15 rounded-full object-cover"
+          />
+          <span className="hidden sm:block text-sm md:text-lg text-white">
+            Center for Student Formation and Discipline
+          </span>
+        </div>
+        <nav className="hidden md:flex gap-8">
+          <Link
+            href="/services"
+            className="text-white font-medium hover:opacity-80 transition-opacity"
+          >
+            Services
+          </Link>
+          <Link
+            href="/about"
+            className="text-white font-medium hover:opacity-80 transition-opacity"
+          >
+            About
+          </Link>
+          <Link
+            href="/auth/login"
+            className="text-white font-medium hover:opacity-80 transition-opacity"
+          >
+            Log In
+          </Link>
+        </nav>
+      </header>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500 text-white">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="absolute inset-0 bg-[url('/umak-building.svg')] bg-cover bg-center opacity-10" />
-        <div className="relative container mx-auto px-4 py-24 lg:py-32">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 text-sm font-medium mb-6">
-              <ShieldCheck className="h-4 w-4" />
-              University of Makati - CSFD
-            </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Center for Student Formation and Discipline
-            </h1>
-            <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl">
-              Your digital gateway to student services at the University of Makati.
-              Submit requests, track status, and access certificates online — anytime, anywhere.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                className="bg-white text-orange-600 hover:bg-white/90"
-                asChild
-              >
-                <Link href="/services/gmc">
-                  Request Certificate
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white/10"
-                asChild
-              >
-                <Link href="/track">Track Request</Link>
-              </Button>
-            </div>
-          </div>
+      <section
+        className="relative h-[400px] md:h-[500px] bg-cover bg-center flex items-center justify-center"
+        style={{
+          backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('/images/landingpagebg.png')`,
+        }}
+      >
+        <div className="text-center text-white px-4">
+          <h1 className="text-3xl md:text-5xl font-bold mb-4 drop-shadow-lg">
+            Welcome back, <span style={{ color: "#ffc400" }}>Heron!</span>
+          </h1>
+          <p className="text-lg md:text-2xl font-light drop-shadow-md">
+            University of Makati, University of Character.
+          </p>
         </div>
-        
-        {/* Wave separator */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path
-              d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z"
-              className="fill-background"
+      </section>
+
+      {/* UMak CSFD Section */}
+      <section
+        className="px-6 md:px-12 py-12 md:py-16 relative"
+        style={{
+          backgroundColor: "#111c4e",
+          backgroundImage: `url('/images/BG-1.png')`,
+          backgroundSize: "contain",
+          backgroundPosition: "left center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 md:gap-12">
+          <div className="flex-1 text-white text-center md:text-left">
+            <h2
+              className="text-4xl md:text-7xl font-bold mb-4 md:mb-5 leading-none"
+              style={{ color: "#ffc400" }}
+            >
+              UMak CSFD
+            </h2>
+            <p className="text-lg md:text-xl mb-4 leading-relaxed">
+              The Center for Student Formation & Discipline monitors and
+              supervises student&apos;s moral rectitude.
+            </p>
+            <p className="text-sm md:text-base opacity-80">
+              (Formerly Prefect of Student Discipline)
+            </p>
+          </div>
+          <div className="flex-1 flex justify-center">
+            <Image
+              src="/images/FILLER IMAGE 1.png"
+              alt="Students"
+              width={450}
+              height={300}
+              className="w-full max-w-[450px] h-auto object-cover rounded-lg"
             />
-          </svg>
-        </div>
-      </section>
-
-      {/* Office Hours Banner */}
-      <section className="container mx-auto px-4 -mt-4 relative z-10">
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center gap-3">
-          <Clock className="h-5 w-5 text-amber-600 flex-shrink-0" />
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            <span className="font-semibold">Office Hours:</span> Monday–Friday, 8:00 AM – 5:00 PM.
-            You may submit requests anytime and we will respond during office hours.
-          </p>
-        </div>
-      </section>
-
-      {/* Services Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Our Services</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            Access various student services online. Submit requests, upload documents,
-            and track your applications from anywhere.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service) => {
-            const Icon = service.icon;
-            return (
-              <Link key={service.href} href={service.href}>
-                <Card className="h-full hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer group">
-                  <CardHeader>
-                    <div
-                      className={`w-12 h-12 rounded-lg ${service.bgColor} ${service.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}
-                    >
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <CardTitle className="text-lg">{service.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {service.description}
-                    </p>
-                  </CardContent>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="bg-muted/50 py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">How It Works</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Get your certificates and clearances in four simple steps
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {steps.map((item, index) => (
-              <div key={item.step} className="relative">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 rounded-full bg-orange-500 text-white flex items-center justify-center text-xl font-bold mb-4">
-                    {item.step}
-                  </div>
-                  <h3 className="font-semibold mb-2">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground">{item.description}</p>
-                </div>
-                {index < steps.length - 1 && (
-                  <div className="hidden lg:block absolute top-7 left-[60%] w-[80%] h-0.5 bg-gradient-to-r from-orange-500 to-amber-500" />
-                )}
-              </div>
-            ))}
           </div>
         </div>
       </section>
 
-      {/* Announcements */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            <Megaphone className="h-6 w-6 text-orange-500" />
-            Announcements
+      {/* Main Service Section */}
+      <section
+        className="px-6 md:px-12 py-12 md:py-16 text-center"
+        style={{
+          background: "linear-gradient(135deg, #ffc400 0%, #e6b000 100%)",
+        }}
+      >
+        <h2
+          className="text-3xl md:text-4xl font-bold mb-4"
+          style={{ color: "#111c4e" }}
+        >
+          Main Service
+        </h2>
+        <p
+          className="text-lg md:text-xl mb-8 md:mb-10"
+          style={{ color: "#111c4e" }}
+        >
+          Want to request good moral or complaint?
+        </p>
+        <div className="flex flex-col sm:flex-row justify-center gap-4 md:gap-8 mb-8">
+          <Link
+            href="/services/gmc"
+            className="text-white px-6 md:px-8 py-3 md:py-4 rounded font-medium hover:shadow-xl transform hover:-translate-y-1 transition-all shadow-lg"
+            style={{ backgroundColor: "#111c4e" }}
+          >
+            Request Good Moral Certificate
+          </Link>
+          <Link
+            href="/complaint"
+            className="text-white px-6 md:px-8 py-3 md:py-4 rounded font-medium hover:shadow-xl transform hover:-translate-y-1 transition-all shadow-lg"
+            style={{ backgroundColor: "#111c4e" }}
+          >
+            File a complaint
+          </Link>
+        </div>
+        <p className="italic" style={{ color: "#111c4e" }}>
+          or visit our services offered
+        </p>
+      </section>
+
+      {/* Services Preview Section */}
+      <section className="container mx-auto px-4 py-12 md:py-16">
+        <div className="text-center mb-8 md:mb-12">
+          <h2
+            className="text-2xl md:text-3xl font-bold mb-2"
+            style={{ color: "#111c4e" }}
+          >
+            Center for Student Formation and Discipline
           </h2>
-          <Button variant="ghost" asChild>
-            <Link href="/announcements">View All</Link>
-          </Button>
+          <h3
+            className="text-2xl md:text-3xl font-bold"
+            style={{ color: "#ffc400" }}
+          >
+            Services
+          </h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="border-l-4 border-l-orange-500">
-            <CardHeader>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Clock className="h-4 w-4" />
-                {new Date().toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </div>
-              <CardTitle className="text-lg">Welcome to iCSFD+</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                The Center for Student Formation and Discipline is now accepting online
-                requests for certificates and clearances. Please use this portal to submit
-                your requests and track their status.
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-blue-500">
-            <CardHeader>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Clock className="h-4 w-4" />
-                {new Date(Date.now() - 86400000).toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </div>
-              <CardTitle className="text-lg">Office Hours Reminder</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Please note that while you can submit requests 24/7, processing is done
-                during office hours (Monday-Friday, 8:00 AM - 5:00 PM).
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="border-l-4 border-l-green-500">
-            <CardHeader>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Clock className="h-4 w-4" />
-                {new Date(Date.now() - 172800000).toLocaleDateString("en-PH", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </div>
-              <CardTitle className="text-lg">QR Code Verification</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                All certificates now include a QR code for easy verification. Employers
-                and institutions can verify the authenticity of your certificate instantly.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
 
-      {/* About CSFD */}
-      <section className="bg-gradient-to-br from-slate-900 to-slate-800 text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        {/* Service Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
+          {/* Good Moral Certificate */}
+          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 text-center hover:shadow-xl transition-shadow flex flex-col">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/logos/GMC 1.png"
+                alt="Good Moral Certificate"
+                width={80}
+                height={80}
+                className="w-14 h-14 md:w-16 md:h-16 object-contain"
+              />
+            </div>
+            <h3
+              className="text-xs md:text-sm font-bold mb-3 md:mb-4 flex-grow"
+              style={{ color: "#111c4e" }}
+            >
+              Good Moral Certificate
+            </h3>
+            <Link
+              href="/services/gmc"
+              className="w-full text-white py-2 rounded-lg font-medium hover:opacity-90 transition-opacity text-xs md:text-sm"
+              style={{ backgroundColor: "#2563eb" }}
+            >
+              Request
+            </Link>
+          </div>
+
+          {/* Uniform Exemption */}
+          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 text-center hover:shadow-xl transition-shadow flex flex-col">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/logos/UNIFORM EXEMPTION 1.png"
+                alt="Uniform Exemption"
+                width={80}
+                height={80}
+                className="w-14 h-14 md:w-16 md:h-16 object-contain"
+              />
+            </div>
+            <h3
+              className="text-xs md:text-sm font-bold mb-3 md:mb-4 flex-grow"
+              style={{ color: "#111c4e" }}
+            >
+              Uniform Exemption
+            </h3>
+            <Link
+              href="/services/uer"
+              className="w-full text-white py-2 rounded-lg font-medium hover:opacity-90 transition-opacity text-xs md:text-sm"
+              style={{ backgroundColor: "#2563eb" }}
+            >
+              Apply
+            </Link>
+          </div>
+
+          {/* Child Admission Clearance */}
+          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 text-center hover:shadow-xl transition-shadow flex flex-col">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/logos/BRINGING CHILD 1.png"
+                alt="Child Admission Clearance"
+                width={96}
+                height={96}
+                className="w-16 h-16 md:w-20 md:h-20 object-contain"
+              />
+            </div>
+            <h3
+              className="text-xs md:text-sm font-bold mb-3 md:mb-4 flex-grow"
+              style={{ color: "#111c4e" }}
+            >
+              Child Admission Clearance
+            </h3>
+            <Link
+              href="/services/cac"
+              className="w-full text-white py-2 rounded-lg font-medium hover:opacity-90 transition-opacity text-xs md:text-sm"
+              style={{ backgroundColor: "#2563eb" }}
+            >
+              Apply
+            </Link>
+          </div>
+
+          {/* Cross-Dressing Permit */}
+          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 text-center hover:shadow-xl transition-shadow flex flex-col">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/logos/CROSS DRESS (1) 1.png"
+                alt="Cross-Dressing Permit"
+                width={80}
+                height={80}
+                className="w-14 h-14 md:w-16 md:h-16 object-contain"
+              />
+            </div>
+            <h3
+              className="text-xs md:text-sm font-bold mb-3 md:mb-4 flex-grow"
+              style={{ color: "#111c4e" }}
+            >
+              Cross-Dressing Permit
+            </h3>
+            <Link
+              href="/services/cdc"
+              className="w-full text-white py-2 rounded-lg font-medium hover:opacity-90 transition-opacity text-xs md:text-sm"
+              style={{ backgroundColor: "#2563eb" }}
+            >
+              Apply
+            </Link>
+          </div>
+
+          {/* Complaint Desk */}
+          <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 text-center hover:shadow-xl transition-shadow flex flex-col col-span-2 sm:col-span-1">
+            <div className="w-16 h-16 md:w-20 md:h-20 mx-auto mb-3 md:mb-4 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/logos/COMPLAINT 1.png"
+                alt="Complaint Desk"
+                width={80}
+                height={80}
+                className="w-14 h-14 md:w-16 md:h-16 object-contain"
+              />
+            </div>
+            <h3
+              className="text-xs md:text-sm font-bold mb-3 md:mb-4 flex-grow"
+              style={{ color: "#111c4e" }}
+            >
+              Complaint Desk
+            </h3>
+            <Link
+              href="/complaint"
+              className="w-full text-white py-2 rounded-lg font-medium hover:opacity-90 transition-opacity text-xs md:text-sm"
+              style={{ backgroundColor: "#2563eb" }}
+            >
+              Submit
+            </Link>
+          </div>
+        </div>
+
+        {/* Info Cards Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+          {/* Violation Notice Card */}
+          <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 flex items-center gap-4 md:gap-6">
+            <div
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ backgroundColor: "#dc2626" }}
+            >
+              <svg
+                className="w-8 h-8 md:w-10 md:h-10 text-white"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
             <div>
-              <h2 className="text-3xl font-bold mb-6">About CSFD</h2>
-              <p className="text-slate-300 mb-6">
-                The Center for Student Formation and Discipline (CSFD) is committed to
-                developing well-rounded individuals who embody the core values of the
-                University of Makati. We provide comprehensive student services including
-                certificate issuance, disciplinary guidance, and character formation programs.
+              <h3
+                className="text-base md:text-lg font-bold mb-1"
+                style={{ color: "#111c4e" }}
+              >
+                Received a Violation Notice/Citation?
+              </h3>
+              <p className="text-xs md:text-sm text-gray-600 mb-3">
+                Access and read the instructions below.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold text-orange-400 mb-2">Vision</h3>
-                  <p className="text-sm text-slate-300">
-                    A leading center for student formation and discipline that produces
-                    graduates of character and integrity.
-                  </p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-orange-400 mb-2">Mission</h3>
-                  <p className="text-sm text-slate-300">
-                    To provide holistic student formation programs and fair disciplinary
-                    processes that nurture responsible, ethical, and community-oriented individuals.
-                  </p>
-                </div>
-              </div>
-              <Button className="mt-6 bg-orange-500 hover:bg-orange-600" asChild>
-                <Link href="/about">
-                  Learn More
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-            <div className="flex justify-center">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-amber-500 rounded-2xl blur-2xl opacity-30" />
-                <div className="relative bg-slate-800 border border-slate-700 rounded-2xl p-8">
-                  <div className="flex items-center justify-center mb-6">
-                    <div className="h-24 w-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-4xl">
-                      i+
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-xl font-bold mb-2">iCSFD+</div>
-                    <div className="text-sm text-slate-400">
-                      Integrated CSFD Digital Management System
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mt-6">
-                    <div className="text-center p-4 bg-slate-700/50 rounded-lg">
-                      <div className="text-2xl font-bold text-orange-400">24/7</div>
-                      <div className="text-xs text-slate-400">Online Access</div>
-                    </div>
-                    <div className="text-center p-4 bg-slate-700/50 rounded-lg">
-                      <div className="text-2xl font-bold text-orange-400">Fast</div>
-                      <div className="text-xs text-slate-400">Processing</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <Link
+                href="/citation-slip"
+                className="inline-block px-4 md:px-6 py-2 rounded-lg font-medium text-xs md:text-sm hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: "#ffc400", color: "#111c4e" }}
+              >
+                Instructions
+              </Link>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* CTA Section */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-8 md:p-12 text-white text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">
-            Ready to submit your request?
-          </h2>
-          <p className="text-white/90 mb-8 max-w-2xl mx-auto">
-            Start your certificate request today. Our online portal makes it easy to submit
-            your application and track its progress from anywhere.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="bg-white text-orange-600 hover:bg-white/90"
-              asChild
-            >
-              <Link href="/services/gmc">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="bg-transparent border-white text-white hover:bg-white/10"
-              asChild
-            >
-              <Link href="/track">Check Request Status</Link>
-            </Button>
+          {/* Other Request Card */}
+          <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 flex items-center gap-4 md:gap-6">
+            <div className="w-16 h-16 md:w-20 md:h-20 flex items-center justify-center flex-shrink-0">
+              <Image
+                src="/icons/pepicons-pop_bulletin-notice.png"
+                alt="Other Request"
+                width={80}
+                height={80}
+                className="w-16 h-16 md:w-20 md:h-20 object-contain"
+              />
+            </div>
+            <div>
+              <h3
+                className="text-base md:text-lg font-bold mb-1"
+                style={{ color: "#111c4e" }}
+              >
+                Other request?
+              </h3>
+              <p className="text-xs md:text-sm text-gray-600">
+                Please proceed to the CSFD Office.
+              </p>
+            </div>
           </div>
         </div>
       </section>
