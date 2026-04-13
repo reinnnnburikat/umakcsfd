@@ -823,15 +823,14 @@ export default function GMCRequestPage() {
 
           {/* Requirements List */}
           <div className="bg-amber-50 rounded-lg p-4 mb-6 border border-amber-200">
-            <h4 className="font-semibold text-amber-800 mb-3">Required Documents:</h4>
-            <ul className="space-y-2">
-              {currentClassification.requirements.map((req, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-amber-700">
-                  <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>{req}</span>
-                </li>
-              ))}
-            </ul>
+            <h4 className="font-semibold text-amber-800 mb-3">Required Document:</h4>
+            <div className="flex items-start gap-2 text-amber-700">
+              <Check className="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <span className="text-sm">{currentClassification.requirementLabel}</span>
+            </div>
+            <p className="text-xs text-amber-600 mt-2 ml-6">
+              {currentClassification.requirementDescription}
+            </p>
           </div>
 
           {/* Classification-specific Questions */}
@@ -1316,10 +1315,10 @@ export default function GMCRequestPage() {
               <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-green-600"></div>
 
               {[
-                "Prepare a letter of request for a Good Moral Certificate addressed to the CSFD office.",
-                "Submit the request letter along with your valid ID to the CSFD office.",
-                "Wait for the processing of your request. This typically takes 1-2 business days.",
-                "Claim your Good Moral Certificate from the CSFD office once processed.",
+                "Fill out the Good Moral Certificate request form with your personal and academic information.",
+                "Upload the required supporting document based on your classification (COR, Report Card, Diploma, TOR, or Honorable Dismissal).",
+                "Wait for the processing of your request. You will receive a notification via email once it's ready.",
+                "Claim your Good Moral Certificate from the CSFD office or download it from the portal once processed.",
               ].map((text, index) => (
                 <motion.div
                   key={index}
