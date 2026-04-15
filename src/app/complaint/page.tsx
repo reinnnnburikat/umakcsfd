@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X, FileText, Check, Image as ImageIcon } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 const colleges = [
   "College of Business and Financial Management",
@@ -95,6 +96,142 @@ export default function ComplaintPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Supporting Evidences Upload State
+  const [uploadedEvidences, setUploadedEvidences] = useState<UploadedEvidence[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Uploaded Evidence interface
+  interface UploadedEvidence {
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    file: File;
+    preview?: string;
+    url?: string;
+    uploaded: boolean;
+    uploadProgress: number;
+  }
+
+  // Calculate form completion percentage
+  const formCompletion = useMemo(() => {
+    const requiredFields = [
+      "givenName",
+      "surname",
+      "sex",
+      "studentNumber",
+      "college",
+      "email",
+      "complaintType",
+      "category",
+      "subject",
+      "description",
+    ];
+    const filledFields = requiredFields.filter(
+      (field) => formData[field as keyof typeof formData]?.trim()
+    );
+    return Math.round((filledFields.length / requiredFields.length) * 100);
+  }, [formData]);
+
+  // Handle evidence file upload
+  const handleEvidenceUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "application/pdf"];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    for (const file of Array.from(files)) {
+      // Validate file type
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`Invalid file type: ${file.name}. Only JPG, PNG, GIF, and PDF are allowed.`);
+        continue;
+      }
+
+      // Validate file size
+      if (file.size > maxSize) {
+        toast.error(`File too large: ${file.name}. Maximum size is 5MB.`);
+        continue;
+      }
+
+      // Check if file already exists
+      if (uploadedEvidences.some((e) => e.name === file.name)) {
+        toast.error(`File already added: ${file.name}`);
+        continue;
+      }
+
+      const newEvidence: UploadedEvidence = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        file: file,
+        uploaded: false,
+        uploadProgress: 0,
+      };
+
+      // Create preview for images
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          newEvidence.preview = event.target?.result as string;
+          setUploadedEvidences((prev) => [...prev, newEvidence]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setUploadedEvidences((prev) => [...prev, newEvidence]);
+      }
+
+      // Upload file to server
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", file);
+
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadFormData,
+        });
+
+        const uploadResult = await uploadResponse.json();
+
+        if (uploadResult.success) {
+          setUploadedEvidences((prev) =>
+            prev.map((e) =>
+              e.id === newEvidence.id
+                ? { ...e, url: uploadResult.data.url, uploaded: true, uploadProgress: 100 }
+                : e
+            )
+          );
+          toast.success(`${file.name} uploaded successfully`);
+        } else {
+          setUploadedEvidences((prev) => prev.filter((e) => e.id !== newEvidence.id));
+          toast.error(`Failed to upload ${file.name}: ${uploadResult.error}`);
+        }
+      } catch (uploadError) {
+        console.error("Upload error:", uploadError);
+        setUploadedEvidences((prev) => prev.filter((e) => e.id !== newEvidence.id));
+        toast.error(`Failed to upload ${file.name}. Please try again.`);
+      }
+    }
+
+    setIsUploading(false);
+    e.target.value = "";
+  };
+
+  // Remove evidence file
+  const removeEvidence = (id: string) => {
+    setUploadedEvidences((prev) => prev.filter((e) => e.id !== id));
+  };
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -131,12 +268,31 @@ export default function ComplaintPage() {
   };
 
   const handleSubmit = async () => {
+    // Check if files are still uploading
+    if (isUploading) {
+      toast.error("Please wait for file uploads to complete");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      // Collect uploaded evidence URLs
+      const documents = uploadedEvidences
+        .filter((e) => e.uploaded && e.url)
+        .map((e) => ({
+          name: e.name,
+          url: e.url,
+          type: e.type,
+          size: e.size,
+        }));
+
       const response = await fetch("/api/complaints", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          documents,
+        }),
       });
 
       const data = await response.json();
@@ -314,6 +470,63 @@ export default function ComplaintPage() {
 
       <section className="px-6 md:px-12 py-8 md:py-12">
         <div className="max-w-6xl mx-auto">
+          {/* Progress Bar */}
+          <div className="mb-8">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm font-semibold" style={{ color: "#111c4e" }}>
+                Form Completion
+              </span>
+              <span className="text-sm font-bold" style={{ color: "#1F9E55" }}>
+                {formCompletion}%
+              </span>
+            </div>
+            <Progress
+              value={formCompletion}
+              className="h-3 bg-gray-200"
+              style={{
+                // @ts-expect-error CSS custom property
+                "--progress-background": formCompletion === 100 ? "#1F9E55" : "#ffc400",
+              }}
+            />
+            <div className="flex justify-between mt-2">
+              {["Complainant", "Complaint", "Respondent", "Review"].map((step, index) => (
+                <div
+                  key={step}
+                  className="flex flex-col items-center"
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
+                      currentStep > index + 1
+                        ? "bg-green-500 text-white"
+                        : currentStep === index + 1
+                        ? "text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                    style={
+                      currentStep === index + 1
+                        ? { backgroundColor: "#111c4e" }
+                        : {}
+                    }
+                  >
+                    {currentStep > index + 1 ? (
+                      <Check className="w-5 h-5" />
+                    ) : (
+                      index + 1
+                    )}
+                  </div>
+                  <span
+                    className={`text-xs mt-1 hidden md:block ${
+                      currentStep === index + 1 ? "font-bold" : ""
+                    }`}
+                    style={{ color: currentStep === index + 1 ? "#111c4e" : "#6b7280" }}
+                  >
+                    {step}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="text-center mb-8 md:mb-12">
             <h1
               className="text-2xl md:text-4xl font-black mb-2"
@@ -592,6 +805,112 @@ export default function ComplaintPage() {
                   />
                 </div>
               </div>
+
+              {/* Supporting Evidences Upload Section */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full bg-[#111c4e] flex items-center justify-center">
+                    <Upload className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold" style={{ color: "#111c4e" }}>
+                      SUPPORTING EVIDENCES
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Upload supporting documents or images (JPG, PNG, GIF, PDF - max 5MB each)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Upload Area */}
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#ffc400] transition-colors">
+                  <input
+                    type="file"
+                    id="evidence-upload"
+                    multiple
+                    accept="image/jpeg,image/png,image/gif,application/pdf"
+                    onChange={handleEvidenceUpload}
+                    className="hidden"
+                    disabled={isUploading}
+                  />
+                  <label
+                    htmlFor="evidence-upload"
+                    className={`cursor-pointer ${isUploading ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    {isUploading ? (
+                      <Loader2 className="w-12 h-12 mx-auto text-[#111c4e] mb-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                    )}
+                    <p className="text-gray-600 font-medium mb-2">
+                      {isUploading ? "Uploading..." : "Click to upload or drag and drop"}
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      JPG, PNG, GIF, or PDF (max 5MB per file)
+                    </p>
+                  </label>
+                </div>
+
+                {/* Uploaded Evidences List */}
+                {uploadedEvidences.length > 0 && (
+                  <div className="mt-6 space-y-3">
+                    <h4 className="font-semibold text-sm text-gray-700">
+                      Uploaded Files ({uploadedEvidences.length})
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {uploadedEvidences.map((evidence) => (
+                        <div
+                          key={evidence.id}
+                          className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          {/* Preview or Icon */}
+                          {evidence.preview ? (
+                            <div className="relative w-12 h-12 flex-shrink-0">
+                              <img
+                                src={evidence.preview}
+                                alt={evidence.name}
+                                className="w-12 h-12 object-cover rounded"
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-12 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
+                              {evidence.type === "application/pdf" ? (
+                                <FileText className="w-6 h-6 text-red-500" />
+                              ) : (
+                                <ImageIcon className="w-6 h-6 text-red-500" />
+                              )}
+                            </div>
+                          )}
+
+                          {/* File Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm truncate">{evidence.name}</p>
+                              {evidence.uploaded && (
+                                <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded flex items-center gap-1">
+                                  <Check className="w-3 h-3" /> Uploaded
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              {formatFileSize(evidence.size)}
+                            </p>
+                          </div>
+
+                          {/* Remove Button */}
+                          <button
+                            type="button"
+                            onClick={() => removeEvidence(evidence.id)}
+                            className="p-1 hover:bg-red-100 rounded transition-colors"
+                          >
+                            <X className="w-5 h-5 text-red-500" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -741,6 +1060,32 @@ export default function ComplaintPage() {
                     <p className="font-medium">{formData.location || "Not specified"}</p>
                   </div>
                 </div>
+
+                {/* Supporting Evidences in Summary */}
+                {uploadedEvidences.length > 0 && (
+                  <div className="mt-4">
+                    <h5 className="text-sm font-semibold text-gray-700 mb-2">Supporting Evidences</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {uploadedEvidences.map((evidence) => (
+                        <div
+                          key={evidence.id}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-lg border border-green-200"
+                        >
+                          {evidence.preview ? (
+                            <img
+                              src={evidence.preview}
+                              alt={evidence.name}
+                              className="w-6 h-6 object-cover rounded"
+                            />
+                          ) : (
+                            <FileText className="w-4 h-4 text-green-600" />
+                          )}
+                          <span className="text-sm text-green-700">{evidence.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Respondent Information */}

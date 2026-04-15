@@ -243,8 +243,8 @@ export function PublicNavbar() {
                 </div>
               )}
 
-              {/* Auth Button / User Menu - Only show when logged in */}
-              {status === "authenticated" && session?.user && (
+              {/* Auth Button - Show Login when not authenticated, User Menu when authenticated */}
+              {status === "authenticated" && session?.user ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors">
@@ -295,6 +295,13 @@ export function PublicNavbar() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              ) : (
+                <Button
+                  onClick={() => router.push("/login")}
+                  className="ml-2 bg-gradient-to-r from-[#ffc400] to-[#ff9500] text-[#111c4e] font-bold hover:from-[#ffc400] hover:to-[#ffaa00] transition-all"
+                >
+                  Login
+                </Button>
               )}
             </nav>
 
@@ -425,8 +432,8 @@ export function PublicNavbar() {
             </div>
           </div>
 
-          {/* Auth Buttons - Only show when logged in */}
-          {status === "authenticated" && session?.user && (
+          {/* Auth Buttons */}
+          {status === "authenticated" && session?.user ? (
             <div className="mt-6 pt-6 border-t border-white/10">
               <div className="space-y-2">
                 {/* Notifications in Mobile Menu */}
@@ -455,6 +462,15 @@ export function PublicNavbar() {
                   <span>Logout</span>
                 </button>
               </div>
+            </div>
+          ) : (
+            <div className="mt-6 pt-6 border-t border-white/10">
+              <Button
+                onClick={() => handleNavigate("/login")}
+                className="w-full bg-gradient-to-r from-[#ffc400] to-[#ff9500] text-[#111c4e] font-bold hover:from-[#ffc400] hover:to-[#ffaa00] transition-all"
+              >
+                Login
+              </Button>
             </div>
           )}
         </div>

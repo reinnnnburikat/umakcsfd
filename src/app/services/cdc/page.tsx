@@ -6,7 +6,7 @@ import Image from "next/image";
 import { PublicNavbar } from "@/components/public-navbar";
 import { PublicFooter } from "@/components/public-footer";
 import { toast } from "sonner";
-import { Check, User, FileText, ClipboardCheck, Calendar, MapPin, Save } from "lucide-react";
+import { Check, User, FileText, ClipboardCheck, Calendar, MapPin, Save, Upload, X, Loader2 } from "lucide-react";
 import { WizardForm, WizardStep, FloatingLabelInput, FloatingLabelSelect, ValidationFeedback } from "@/components/ui/wizard-form";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -72,6 +72,18 @@ const defaultFormData = {
   additionalDetails: "",
 };
 
+// Document upload interface
+interface UploadedDocument {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  file: File;
+  preview?: string;
+  url?: string;
+  uploaded?: boolean;
+}
+
 export default function CDCRequestPage() {
   const router = useRouter();
   const [page, setPage] = useState<"process" | "form" | "success">("process");
@@ -87,6 +99,12 @@ export default function CDCRequestPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  
+  // Document upload states
+  const [corDocument, setCorDocument] = useState<UploadedDocument | null>(null);
+  const [schoolIdDocument, setSchoolIdDocument] = useState<UploadedDocument | null>(null);
+  const [isUploadingCor, setIsUploadingCor] = useState(false);
+  const [isUploadingSchoolId, setIsUploadingSchoolId] = useState(false);
 
   // Load draft from localStorage on mount
   useEffect(() => {
@@ -254,14 +272,149 @@ export default function CDCRequestPage() {
     return isValid;
   };
 
+  // Validate step 3 (documents)
+  const validateStep3 = (): boolean => {
+    return corDocument !== null && corDocument.uploaded && 
+           schoolIdDocument !== null && schoolIdDocument.uploaded;
+  };
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+
+  // Handle document upload
+  const handleDocumentUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    documentType: 'cor' | 'schoolId',
+    setDocument: (doc: UploadedDocument | null) => void,
+    setIsUploading: (uploading: boolean) => void
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error(`Invalid file type: ${file.name}. Only JPG, PNG, GIF, and PDF are allowed.`);
+      setIsUploading(false);
+      e.target.value = '';
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(`File too large: ${file.name}. Maximum size is 5MB.`);
+      setIsUploading(false);
+      e.target.value = '';
+      return;
+    }
+
+    const newDoc: UploadedDocument = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      file: file,
+      uploaded: false,
+    };
+
+    // Create preview for images
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        newDoc.preview = event.target?.result as string;
+        setDocument(newDoc);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setDocument(newDoc);
+    }
+
+    // Upload file to server immediately
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      const uploadResult = await uploadResponse.json();
+
+      if (uploadResult.success) {
+        // Update document with server URL
+        setDocument({
+          ...newDoc,
+          url: uploadResult.data.url,
+          uploaded: true,
+        });
+        toast.success(`${file.name} uploaded successfully`);
+      } else {
+        toast.error(`Failed to upload ${file.name}: ${uploadResult.error}`);
+        setDocument(null);
+      }
+    } catch (uploadError) {
+      console.error('Upload error:', uploadError);
+      toast.error(`Failed to upload ${file.name}. Please try again.`);
+      setDocument(null);
+    }
+
+    setIsUploading(false);
+    // Reset input
+    e.target.value = '';
+  };
+
+  // Remove document
+  const removeDocument = (
+    setDocument: (doc: null) => void
+  ) => {
+    setDocument(null);
+  };
+
   const handleSubmit = async () => {
     if (!validateStep1() || !validateStep2()) {
       toast.error("Please fill in all required fields");
       return;
     }
 
+    // Check if documents are uploaded
+    if (!corDocument?.uploaded || !schoolIdDocument?.uploaded) {
+      toast.error("Please upload both COR and School ID documents");
+      return;
+    }
+
+    // Check if documents are still uploading
+    if (isUploadingCor || isUploadingSchoolId) {
+      toast.error("Please wait for document uploads to complete");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
+      // Collect uploaded document URLs
+      const documents = [
+        {
+          name: corDocument.name,
+          url: corDocument.url,
+          type: corDocument.type,
+          size: corDocument.size,
+          documentType: 'COR',
+        },
+        {
+          name: schoolIdDocument.name,
+          url: schoolIdDocument.url,
+          type: schoolIdDocument.type,
+          size: schoolIdDocument.size,
+          documentType: 'SchoolID',
+        },
+      ];
+
       const response = await fetch("/api/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -285,6 +438,7 @@ export default function CDCRequestPage() {
             additionalDetails: formData.additionalDetails,
             otherPurpose: formData.otherPurpose,
           }),
+          documents,
         }),
       });
 
@@ -334,6 +488,110 @@ export default function CDCRequestPage() {
     const hasOther = formData.purpose !== "Other" || formData.otherPurpose.trim();
     return hasPurpose && hasOther && !errors.purpose && !errors.otherPurpose;
   }, [formData, errors]);
+
+  // Check if step 3 is complete
+  const isStep3Complete = useMemo(() => {
+    return corDocument !== null && corDocument.uploaded && 
+           schoolIdDocument !== null && schoolIdDocument.uploaded;
+  }, [corDocument, schoolIdDocument]);
+
+  // Document upload component
+  const DocumentUploadField = ({ 
+    label, 
+    description,
+    document, 
+    isUploading, 
+    onUpload, 
+    onRemove,
+    error 
+  }: { 
+    label: string;
+    description: string;
+    document: UploadedDocument | null; 
+    isUploading: boolean; 
+    onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onRemove: () => void;
+    error?: string;
+  }) => (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <label className="text-sm font-semibold" style={{ color: "#111c4e" }}>
+          {label}<span className="text-red-500">*</span>
+        </label>
+        {document?.uploaded && (
+          <span className="text-xs text-green-600 bg-green-100 px-2 py-0.5 rounded flex items-center gap-1">
+            <Check className="w-3 h-3" /> Uploaded
+          </span>
+        )}
+      </div>
+      <p className="text-sm text-gray-500">{description}</p>
+      
+      {document ? (
+        <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+          {/* Preview or Icon */}
+          {document.preview ? (
+            <img
+              src={document.preview}
+              alt={document.name}
+              className="w-16 h-16 object-cover rounded"
+            />
+          ) : (
+            <div className="w-16 h-16 bg-red-100 rounded flex items-center justify-center">
+              <FileText className="w-8 h-8 text-red-500" />
+            </div>
+          )}
+
+          {/* File Info */}
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-sm truncate">{document.name}</p>
+            <p className="text-xs text-gray-500">{formatFileSize(document.size)}</p>
+          </div>
+
+          {/* Remove Button */}
+          <button
+            type="button"
+            onClick={onRemove}
+            className="p-2 text-red-500 hover:bg-red-100 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      ) : (
+        <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+          error ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-[#ffc400]'
+        }`}>
+          <input
+            type="file"
+            id={`upload-${label.replace(/\s/g, '-')}`}
+            accept="image/jpeg,image/png,image/gif,application/pdf"
+            onChange={onUpload}
+            className="hidden"
+            disabled={isUploading}
+          />
+          <label
+            htmlFor={`upload-${label.replace(/\s/g, '-')}`}
+            className={`cursor-pointer ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+          >
+            {isUploading ? (
+              <Loader2 className="w-10 h-10 mx-auto text-[#111c4e] mb-3 animate-spin" />
+            ) : (
+              <Upload className="w-10 h-10 mx-auto text-gray-400 mb-3" />
+            )}
+            <p className="text-gray-600 font-medium mb-1">
+              {isUploading ? "Uploading..." : "Click to upload"}
+            </p>
+            <p className="text-xs text-gray-400">
+              JPG, PNG, GIF, or PDF (max 5MB)
+            </p>
+          </label>
+        </div>
+      )}
+      
+      {error && (
+        <p className="text-red-500 text-sm">{error}</p>
+      )}
+    </div>
+  );
 
   // Step 1 Content: Personal Information
   const Step1Content = (
@@ -618,8 +876,70 @@ export default function CDCRequestPage() {
     </motion.div>
   );
 
-  // Step 3 Content: Summary
+  // Step 3 Content: Document Upload
   const Step3Content = (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="space-y-6"
+    >
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-[#111c4e] flex items-center justify-center">
+            <Upload className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold" style={{ color: "#111c4e" }}>
+              REQUIREMENT/S
+            </h3>
+            <p className="text-sm text-gray-500">
+              Upload your supporting documents
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-amber-50 rounded-lg p-4 mb-6 border border-amber-200">
+          <h4 className="font-semibold text-amber-800 mb-2">Required Documents:</h4>
+          <ul className="text-sm text-amber-700 space-y-1">
+            <li className="flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Certificate of Registration (COR)
+            </li>
+            <li className="flex items-center gap-2">
+              <Check className="w-4 h-4" />
+              Copy of School ID
+            </li>
+          </ul>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* COR Upload */}
+          <DocumentUploadField
+            label="Certificate of Registration (COR)"
+            description="Upload your current Certificate of Registration"
+            document={corDocument}
+            isUploading={isUploadingCor}
+            onUpload={(e) => handleDocumentUpload(e, 'cor', setCorDocument, setIsUploadingCor)}
+            onRemove={() => removeDocument(setCorDocument)}
+          />
+
+          {/* School ID Upload */}
+          <DocumentUploadField
+            label="Copy of School ID"
+            description="Upload a clear copy of your School ID"
+            document={schoolIdDocument}
+            isUploading={isUploadingSchoolId}
+            onUpload={(e) => handleDocumentUpload(e, 'schoolId', setSchoolIdDocument, setIsUploadingSchoolId)}
+            onRemove={() => removeDocument(setSchoolIdDocument)}
+          />
+        </div>
+      </div>
+    </motion.div>
+  );
+
+  // Step 4 Content: Summary
+  const Step4Content = (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -696,6 +1016,27 @@ export default function CDCRequestPage() {
           </div>
         </div>
 
+        {/* Uploaded Documents Summary */}
+        <div className="mt-6 pt-6 border-t border-gray-100">
+          <h4 className="font-semibold mb-4" style={{ color: "#111c4e" }}>Uploaded Documents</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+              <Check className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="text-sm font-medium">COR</p>
+                <p className="text-xs text-gray-500">{corDocument?.name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+              <Check className="w-5 h-5 text-green-600" />
+              <div>
+                <p className="text-sm font-medium">School ID</p>
+                <p className="text-xs text-gray-500">{schoolIdDocument?.name}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="mt-6 p-4 bg-amber-50 rounded-lg border border-amber-200">
           <p className="text-sm text-amber-800">
             <strong>Important:</strong> Please ensure all information is correct before submitting.
@@ -725,10 +1066,18 @@ export default function CDCRequestPage() {
       canProceed: isStep2Complete,
     },
     {
+      id: "documents",
+      title: "Documents",
+      description: "Upload Documents",
+      content: Step3Content,
+      isComplete: isStep3Complete,
+      canProceed: isStep3Complete,
+    },
+    {
       id: "summary",
       title: "Review",
       description: "Verify Information",
-      content: Step3Content,
+      content: Step4Content,
       isComplete: true,
       canProceed: true,
     },
@@ -745,6 +1094,10 @@ export default function CDCRequestPage() {
         return;
       }
       if (currentStep === 1 && !validateStep2()) {
+        return;
+      }
+      if (currentStep === 2 && !validateStep3()) {
+        toast.error("Please upload both COR and School ID documents");
         return;
       }
     }
@@ -872,10 +1225,10 @@ export default function CDCRequestPage() {
               <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-green-600"></div>
 
               {[
-                "Prepare a letter of request for Cross-Dressing Clearance addressed to the CSFD office, stating the purpose and event details.",
-                "Submit the request letter along with your valid ID, COR, and endorsement letter from Dean/Department Head to the CSFD office.",
-                "Wait for the processing of your request. The CSFD office will review your justification and supporting documents.",
-                "Claim your Cross-Dressing Clearance from the CSFD office once approved.",
+                "Submit your Cross-Dressing Clearance request through our online portal.",
+                "Wait for your request to be validated by the CSFD office.",
+                "Receive the digital copy of your clearance via email.",
+                "Proceed to the CSFD office for authentication (dry seal).",
               ].map((text, index) => (
                 <motion.div
                   key={index}

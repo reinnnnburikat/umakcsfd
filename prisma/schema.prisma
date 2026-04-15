@@ -9,10 +9,9 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_DATABASE_URL")
-  // Fallback for Turbopack development
-  // url       = "postgresql://postgres.nqbswodpygegaqdzjokr:T7VBtBFB5ska1Tnz@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres"
 }
 
+// User Roles
 enum UserRole {
   STUDENT
   FACULTY
@@ -27,11 +26,12 @@ enum UserStatus {
   SUSPENDED
 }
 
+// Request Types
 enum RequestType {
-  GMC
-  UER
-  CDC
-  CAC
+  GMC  // Good Moral Certificate
+  UER  // Uniform Exemption Request
+  CDC  // Cross-Dressing Clearance
+  CAC  // Child Admission Clearance
 }
 
 enum RequestStatus {
@@ -42,6 +42,26 @@ enum RequestStatus {
   REJECTED
 }
 
+// Offense Categories
+enum OffenseCategory {
+  MINOR
+  MAJOR
+  LATE_FACULTY_EVALUATION
+  LATE_ACCESS_ROG
+  LATE_PAYMENT
+  OTHER
+}
+
+// Offense Severity Levels
+enum OffenseLevel {
+  FIRST
+  SECOND
+  THIRD
+  FOURTH
+  FIFTH
+}
+
+// Complaint Categories
 enum ComplaintCategory {
   MAJOR
   MINOR
@@ -61,6 +81,23 @@ enum TemplateType {
   EMAIL
 }
 
+// Endorsement Types
+enum EndorsementType {
+  ADMINISTRATIVE_SERVICE
+  COMMUNITY_SERVICE
+}
+
+enum EndorsementStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// ============================================
+// USER MODELS
+// ============================================
+
 model User {
   id            String        @id @default(cuid())
   email         String        @unique
@@ -79,15 +116,18 @@ model User {
   auditLogs     AuditLog[]
   templates     Template[]
   notifications Notification[]
+  processedOffenses DisciplinaryOffense[] @relation("ProcessedBy")
+  clearedOffenses   OffenseClearance[]    @relation("ClearedBy")
+  endorsements      Endorsement[]         @relation("ProcessedEndorsements")
 }
 
 model Notification {
   id          String   @id @default(cuid())
-  userId      String?  // null for broadcast notifications
+  userId      String?
   title       String
   message     String
-  type        String   // info, success, warning, error
-  link        String?  // optional link to related record
+  type        String
+  link        String?
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
   
@@ -117,6 +157,10 @@ model Profile {
   updatedAt       DateTime @updatedAt
 }
 
+// ============================================
+// REQUEST MODELS
+// ============================================
+
 model Request {
   id                    String        @id @default(cuid())
   controlNumber         String        @unique
@@ -137,7 +181,7 @@ model Request {
   requestorSex          String?
   
   // Classification (for GMC)
-  classification        String?  // Currently Enrolled, Graduate, Non-Completer
+  classification        String?
   yearGraduated         String?
   
   // Purpose
@@ -145,15 +189,16 @@ model Request {
   otherPurpose          String?
   
   // Type-specific fields (JSON)
-  additionalData        String?  // JSON for UER, CDC, CAC specific fields
+  additionalData        String?
   
-  // Documents
-  documents             String?  // JSON array of file paths
+  // Documents (JSON array)
+  documents             String?
   
   // Processing
   remarks               String?
   processedBy           String?
   processedAt           DateTime?
+  processorName         String?  // Name of staff who processed
   
   // Certificate
   certificateUrl        String?
@@ -171,7 +216,71 @@ model Request {
   updatedAt             DateTime      @updatedAt
   
   processor             User?         @relation(fields: [processedBy], references: [id])
+  
+  // Relations for specific request types
+  childInfos            ChildInfo[]
+  uniformExemptionData  UniformExemptionData?
+  
+  @@index([requestType])
+  @@index([status])
+  @@index([createdAt])
 }
+
+// ============================================
+// CHILD ADMISSION CLEARANCE - CHILD INFO
+// ============================================
+
+model ChildInfo {
+  id                String   @id @default(cuid())
+  requestId         String
+  
+  // Child Information
+  surname           String
+  givenName         String
+  middleName        String?
+  extensionName     String?
+  sex               String
+  age               Int
+  
+  // Child Photo
+  photoUrl          String?
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  request           Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  @@index([requestId])
+}
+
+// ============================================
+// UNIFORM EXEMPTION - CATEGORY DATA
+// ============================================
+
+model UniformExemptionData {
+  id                    String   @id @default(cuid())
+  requestId             String   @unique
+  
+  // Category
+  category              String  // working_student, office_org_event, ojt, college_org_shirt, other
+  
+  // Category-specific answers (JSON)
+  categoryAnswers       String?
+  
+  // Documents (JSON array)
+  documents             String?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  request               Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  
+  @@index([requestId])
+}
+
+// ============================================
+// COMPLAINT MODEL
+// ============================================
 
 model Complaint {
   id              String          @id @default(cuid())
@@ -180,6 +289,7 @@ model Complaint {
   respondents     String          // JSON array
   category        ComplaintCategory?
   complaintType   String?
+  specifyOther    String?         // For "Other" category
   status          ComplaintStatus @default(PENDING)
   
   subject         String
@@ -191,7 +301,8 @@ model Complaint {
   witnesses       String?         // JSON array
   previousReports String?
   
-  documents       String?         // JSON array
+  // Supporting Evidence Documents (JSON array)
+  documents       String?
   
   // Processing
   remarks         String?
@@ -205,7 +316,144 @@ model Complaint {
   updatedAt       DateTime        @updatedAt
   
   processor       User?           @relation(fields: [processedBy], references: [id])
+  
+  @@index([status])
+  @@index([createdAt])
 }
+
+// ============================================
+// DISCIPLINARY RECORDS
+// ============================================
+
+model DisciplinaryRecord {
+  id                String   @id @default(cuid())
+  studentNumber     String
+  studentName       String
+  college           String?
+  course            String?
+  yearLevel         String?
+  
+  // Total counts by category
+  minorCount        Int      @default(0)
+  majorCount        Int      @default(0)
+  lateFacultyCount  Int      @default(0)
+  lateRogCount      Int      @default(0)
+  latePaymentCount  Int      @default(0)
+  otherCount        Int      @default(0)
+  
+  // Overall status
+  hasActiveOffenses Boolean  @default(false)
+  isEndorsed        Boolean  @default(false)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  offenses          DisciplinaryOffense[]
+  clearances        OffenseClearance[]
+  endorsements      Endorsement[]
+  
+  @@unique([studentNumber])
+  @@index([studentNumber])
+}
+
+model DisciplinaryOffense {
+  id                String           @id @default(cuid())
+  recordId          String
+  
+  // Offense Details
+  offenseCategory   OffenseCategory
+  offenseLevel      OffenseLevel
+  offenseDate       DateTime         @default(now())
+  
+  // For "Other" category
+  specifyOther      String?
+  
+  // Description
+  description       String?
+  controlNumber     String?          // Related complaint/control number
+  
+  // Processing
+  processedBy       String?
+  processedAt       DateTime?
+  
+  // Status
+  isCleared         Boolean          @default(false)
+  clearedAt         DateTime?
+  
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+  record            DisciplinaryRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  processor         User?            @relation("ProcessedBy", fields: [processedBy], references: [id])
+  
+  @@index([recordId])
+  @@index([offenseCategory])
+  @@index([isCleared])
+}
+
+model OffenseClearance {
+  id                String   @id @default(cuid())
+  recordId          String
+  
+  // Clearance Details
+  clearedBy         String
+  clearedAt         DateTime @default(now())
+  reason            String
+  
+  // Cleared offense counts (snapshot at time of clearance)
+  minorCleared      Int      @default(0)
+  majorCleared      Int      @default(0)
+  lateFacultyCleared Int     @default(0)
+  lateRogCleared    Int      @default(0)
+  latePaymentCleared Int     @default(0)
+  otherCleared      Int      @default(0)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  record            DisciplinaryRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  clearedByUser     User     @relation("ClearedBy", fields: [clearedBy], references: [id])
+  
+  @@index([recordId])
+  @@index([clearedAt])
+}
+
+model Endorsement {
+  id                String            @id @default(cuid())
+  recordId          String
+  
+  // Endorsement Details
+  type              EndorsementType
+  status            EndorsementStatus @default(PENDING)
+  
+  // Trigger info
+  triggeredByCategory OffenseCategory
+  triggeredByLevel   OffenseLevel
+  
+  // Details
+  details           String?
+  hoursRequired     Int?
+  hoursCompleted    Int?
+  
+  // Processing
+  processedBy       String?
+  processedAt       DateTime?
+  completedAt       DateTime?
+  remarks           String?
+  
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  record            DisciplinaryRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  processor         User?             @relation("ProcessedEndorsements", fields: [processedBy], references: [id])
+  
+  @@index([recordId])
+  @@index([status])
+}
+
+// ============================================
+// CONTENT MANAGEMENT
+// ============================================
 
 model Announcement {
   id          String   @id @default(cuid())
@@ -220,6 +468,9 @@ model Announcement {
   updatedAt   DateTime @updatedAt
   
   author      User     @relation(fields: [createdBy], references: [id])
+  
+  @@index([isActive])
+  @@index([postedFrom])
 }
 
 model Template {
@@ -228,9 +479,9 @@ model Template {
   templateType  TemplateType
   filename      String?
   storagePath   String?
-  placeholders  String?      // JSON configuration
-  subject       String?      // For email templates
-  bodyHtml      String?      // For email templates
+  placeholders  String?
+  subject       String?
+  bodyHtml      String?
   isActive      Boolean      @default(true)
   createdBy     String
   createdAt     DateTime     @default(now())
@@ -246,13 +497,16 @@ model AuditLog {
   action      String
   module      String
   recordId    String?
-  oldValue    String?  // JSON
-  newValue    String?  // JSON
+  oldValue    String?
+  newValue    String?
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
   
   user        User?    @relation(fields: [userId], references: [id])
+  
+  @@index([module])
+  @@index([createdAt])
 }
 
 model CmsContent {
@@ -266,17 +520,19 @@ model CmsContent {
 
 model ManagedList {
   id          String   @id @default(cuid())
-  listType    String   // college, purpose, complaint_type, violation
+  listType    String
   label       String
   value       String?
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
+  
+  @@index([listType])
 }
 
 model OfficeHours {
   id          String   @id @default(cuid())
-  dayOfWeek   Int      // 0=Sunday, 1=Monday, etc.
+  dayOfWeek   Int
   openTime    String
   closeTime   String
   isOpen      Boolean  @default(true)
@@ -289,3 +545,10 @@ model SystemSetting {
   description String?
   updatedAt   DateTime @updatedAt
 }
+
+// ============================================
+// UPDATE REQUEST MODEL TO ADD RELATIONS
+// ============================================
+
+// Note: We need to update the Request model to include relations
+// for ChildInfo and UniformExemptionData

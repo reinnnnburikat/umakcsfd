@@ -8,8 +8,12 @@ import { cn } from "@/lib/utils"
 function Progress({
   className,
   value,
+  style,
   ...props
 }: React.ComponentProps<typeof ProgressPrimitive.Root>) {
+  // Get custom progress background color from CSS variable or use default
+  const indicatorColor = style?.["--progress-background" as keyof React.CSSProperties] || "hsl(var(--primary))"
+
   return (
     <ProgressPrimitive.Root
       data-slot="progress"
@@ -17,12 +21,16 @@ function Progress({
         "bg-primary/20 relative h-2 w-full overflow-hidden rounded-full",
         className
       )}
+      style={style}
       {...props}
     >
       <ProgressPrimitive.Indicator
         data-slot="progress-indicator"
-        className="bg-primary h-full w-full flex-1 transition-all"
-        style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+        className="h-full w-full flex-1 transition-all"
+        style={{
+          transform: `translateX(-${100 - (value || 0)}%)`,
+          backgroundColor: typeof indicatorColor === 'string' ? indicatorColor : undefined,
+        }}
       />
     </ProgressPrimitive.Root>
   )

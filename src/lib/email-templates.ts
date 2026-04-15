@@ -41,6 +41,18 @@ const ESTIMATED_PROCESSING_DAYS: Record<string, number> = {
   CAC: 3,
 };
 
+// Get UMAK logo URL (for email, use public URL)
+const getUmakLogoUrl = (): string => {
+  const baseUrl = getBaseUrl();
+  return `${baseUrl}/logos/UMAK LOGO.png`;
+};
+
+// Get CSFD logo URL
+const getCsfdLogoUrl = (): string => {
+  const baseUrl = getBaseUrl();
+  return `${baseUrl}/logos/CSFD LOGO.png`;
+};
+
 // Common email header with UMAK branding
 const getEmailHeader = (title: string): string => `
 <!DOCTYPE html>
@@ -73,17 +85,41 @@ const getEmailHeader = (title: string): string => `
     /* Header */
     .email-header {
       background: linear-gradient(135deg, ${COLORS.navyBlue} 0%, #1a2d6b 100%);
-      padding: 30px 20px;
+      padding: 25px 20px;
       text-align: center;
     }
     
     .logo-container {
       margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
     }
     
-    .logo-placeholder {
-      width: 80px;
-      height: 80px;
+    .umak-logo {
+      width: 70px;
+      height: 70px;
+      object-fit: contain;
+      background-color: ${COLORS.white};
+      border-radius: 50%;
+      padding: 5px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .csfd-logo {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      background-color: ${COLORS.white};
+      border-radius: 50%;
+      padding: 5px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .logo-fallback {
+      width: 70px;
+      height: 70px;
       background-color: ${COLORS.white};
       border-radius: 50%;
       margin: 0 auto;
@@ -95,23 +131,38 @@ const getEmailHeader = (title: string): string => `
     
     .logo-text {
       color: ${COLORS.navyBlue};
-      font-size: 14px;
+      font-size: 12px;
       font-weight: bold;
       text-align: center;
     }
     
     .header-title {
       color: ${COLORS.white};
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 600;
       margin: 0;
     }
     
     .header-subtitle {
       color: ${COLORS.gold};
-      font-size: 14px;
+      font-size: 13px;
       margin-top: 5px;
       font-weight: 500;
+    }
+    
+    .csfd-branding {
+      display: inline-block;
+      background-color: rgba(255, 196, 0, 0.15);
+      padding: 4px 12px;
+      border-radius: 15px;
+      margin-top: 10px;
+    }
+    
+    .csfd-branding-text {
+      color: ${COLORS.gold};
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
     }
     
     /* Content */
@@ -462,6 +513,48 @@ const getEmailHeader = (title: string): string => `
       font-size: 14px;
     }
     
+    /* Processor Info Box */
+    .processor-box {
+      background-color: #f0f9ff;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .processor-icon {
+      width: 36px;
+      height: 36px;
+      background-color: #0ea5e9;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    
+    .processor-info {
+      flex: 1;
+    }
+    
+    .processor-label {
+      font-size: 11px;
+      color: #0369a1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .processor-name {
+      font-size: 14px;
+      color: #0c4a6e;
+      font-weight: 600;
+    }
+    
     /* Responsive */
     @media only screen and (max-width: 480px) {
       .email-container {
@@ -473,7 +566,21 @@ const getEmailHeader = (title: string): string => `
       }
       
       .header-title {
-        font-size: 20px;
+        font-size: 18px;
+      }
+      
+      .logo-container {
+        gap: 10px;
+      }
+      
+      .umak-logo {
+        width: 55px;
+        height: 55px;
+      }
+      
+      .csfd-logo {
+        width: 45px;
+        height: 45px;
       }
       
       .email-content {
@@ -506,12 +613,20 @@ const getEmailHeader = (title: string): string => `
   <div class="email-container">
     <div class="email-header">
       <div class="logo-container">
-        <div class="logo-placeholder">
+        <img src="${getUmakLogoUrl()}" alt="UMak Logo" class="umak-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="logo-fallback" style="display: none;">
+          <span class="logo-text">UMAK</span>
+        </div>
+        <img src="${getCsfdLogoUrl()}" alt="CSFD Logo" class="csfd-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="logo-fallback" style="display: none;">
           <span class="logo-text">CSFD</span>
         </div>
       </div>
       <h1 class="header-title">${title}</h1>
-      <p class="header-subtitle">University of Makati - Center for Student Formation and Development</p>
+      <p class="header-subtitle">University of Makati</p>
+      <div class="csfd-branding">
+        <span class="csfd-branding-text">CENTER FOR STUDENT FORMATION AND DEVELOPMENT</span>
+      </div>
     </div>
 `;
 
@@ -702,15 +817,15 @@ ${getEmailHeader('Your Request is Now Being Processed')}
         <p class="success-title">✅ Great News!</p>
         <p class="success-text">
           Your <strong>${requestTypeName}</strong> request is now being processed by our team.
-          ${data.processorName ? `It is being handled by ${data.processorName}.` : ''}
         </p>
       </div>
       
+      <div class="control-number-box">
+        <p class="control-number-label">Your Control Number</p>
+        <p class="control-number-value">${data.controlNumber}</p>
+      </div>
+      
       <div class="info-box">
-        <div class="info-row">
-          <span class="info-label">Control Number:</span>
-          <span class="info-value"><strong>${data.controlNumber}</strong></span>
-        </div>
         <div class="info-row">
           <span class="info-label">Request Type:</span>
           <span class="info-value">${requestTypeName}</span>
@@ -719,7 +834,21 @@ ${getEmailHeader('Your Request is Now Being Processed')}
           <span class="info-label">Status:</span>
           <span class="info-value"><span class="status-badge status-processing">Processing</span></span>
         </div>
+        <div class="info-row">
+          <span class="info-label">Date Updated:</span>
+          <span class="info-value">${new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        </div>
       </div>
+      
+      ${data.processorName ? `
+      <div class="processor-box">
+        <div class="processor-icon">👤</div>
+        <div class="processor-info">
+          <p class="processor-label">Processed By</p>
+          <p class="processor-name">${data.processorName}</p>
+        </div>
+      </div>
+      ` : ''}
       
       <p class="message">
         Our team is now reviewing your submitted documents and processing your request. 
@@ -756,6 +885,7 @@ export function getReadyForPickupEmailTemplate(data: {
   requestorName: string;
   trackingToken?: string;
   claimLocation?: string;
+  processorName?: string;
 }): string {
   const trackingUrl = data.trackingToken 
     ? `${getBaseUrl()}/track?token=${data.trackingToken}`
@@ -792,10 +922,24 @@ ${getEmailHeader('Your Certificate is Ready for Pickup!')}
           <span class="info-value"><span class="status-badge status-ready">Ready for Pickup</span></span>
         </div>
         <div class="info-row">
+          <span class="info-label">Date Ready:</span>
+          <span class="info-value">${new Date().toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        </div>
+        <div class="info-row">
           <span class="info-label">Claim Location:</span>
           <span class="info-value"><strong>${claimLocation}</strong></span>
         </div>
       </div>
+      
+      ${data.processorName ? `
+      <div class="processor-box">
+        <div class="processor-icon">👤</div>
+        <div class="processor-info">
+          <p class="processor-label">Processed By</p>
+          <p class="processor-name">${data.processorName}</p>
+        </div>
+      </div>
+      ` : ''}
       
       <div class="alert-box">
         <p class="alert-title">📋 What to Bring</p>
@@ -835,6 +979,7 @@ export function getIssuedEmailTemplate(data: {
   downloadLink?: string;
   validUntil?: string;
   certificateUrl?: string;
+  processorName?: string;
 }): string {
   const trackingUrl = data.trackingToken 
     ? `${getBaseUrl()}/track?token=${data.trackingToken}`
@@ -881,6 +1026,16 @@ ${getEmailHeader('Your Certificate Has Been Issued!')}
         </div>
         ` : ''}
       </div>
+      
+      ${data.processorName ? `
+      <div class="processor-box">
+        <div class="processor-icon">👤</div>
+        <div class="processor-info">
+          <p class="processor-label">Processed By</p>
+          <p class="processor-name">${data.processorName}</p>
+        </div>
+      </div>
+      ` : ''}
       
       <div class="alert-box">
         <p class="alert-title">📥 Download Your Certificate</p>
