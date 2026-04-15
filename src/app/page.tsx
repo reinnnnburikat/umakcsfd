@@ -9,6 +9,13 @@ import { PublicFooter } from "@/components/public-footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   FileText,
   Shirt,
   Users,
@@ -28,6 +35,9 @@ import {
   Users as UsersIcon,
   Clock as ClockIcon,
   Award as AwardIcon,
+  Calendar,
+  Tag,
+  X,
 } from "lucide-react";
 
 // Color scheme
@@ -141,6 +151,23 @@ const announcements = [
     title: "Online Certificate Request System Launched",
     date: "January 15, 2025",
     excerpt: "We're excited to announce the launch of our new digital certificate request system...",
+    content: `We're excited to announce the launch of our new digital certificate request system! This modernized platform allows students to conveniently request certificates online, eliminating the need for physical submissions and long queues.
+
+Key Features:
+• Online submission of certificate requests (Good Moral Certificate, Uniform Exemption, Cross-Dressing Clearance, Child Admission Clearance)
+• Real-time tracking of request status
+• Email notifications for status updates
+• Digital certificate download (for eligible requests)
+• Secure document upload for supporting requirements
+
+How to Use:
+1. Visit the Services page and select your desired certificate type
+2. Fill out the online form with your personal and academic details
+3. Upload required supporting documents
+4. Submit and receive your control number for tracking
+5. Wait for email notifications on your request status
+
+For assistance, please visit the CSFD office or contact us at csfd@umak.edu.ph.`,
     type: "announcement",
   },
   {
@@ -148,6 +175,20 @@ const announcements = [
     title: "Office Hours Update for Semester Break",
     date: "January 10, 2025",
     excerpt: "Please be advised of modified office hours during the semester break period...",
+    content: `Please be advised that the Center for Student Formation and Development (CSFD) will have modified office hours during the semester break period.
+
+Modified Schedule:
+• Monday to Friday: 9:00 AM - 4:00 PM
+• Closed on weekends and holidays
+
+Regular office hours (8:00 AM - 5:00 PM) will resume on the first day of classes.
+
+Important Notes:
+• Certificate processing may take longer during this period
+• Online requests can still be submitted 24/7 through our portal
+• For urgent matters, please email csfd@umak.edu.ph
+
+We apologize for any inconvenience and thank you for your understanding.`,
     type: "advisory",
   },
   {
@@ -155,9 +196,129 @@ const announcements = [
     title: "New: Track Your Request in Real-Time",
     date: "January 5, 2025",
     excerpt: "You can now track your certificate request status in real-time using our new tracking feature...",
+    content: `Great news! You can now track your certificate request status in real-time using our new tracking feature. No more wondering about the progress of your application!
+
+How to Track Your Request:
+
+Option 1: Using Control Number
+1. Go to the Track Request page
+2. Enter your Control Number (e.g., GMC-2025-001234)
+3. Click "Track" to view your request status
+
+Option 2: Using Email
+1. Enter the email address you used when submitting the request
+2. We'll send you all requests associated with that email
+
+Status Definitions:
+• NEW - Your request has been received and is in queue
+• PROCESSING - Your request is being reviewed by our staff
+• ISSUED - Your certificate is ready for pickup or download
+• HOLD - Your request needs additional requirements
+• REJECTED - Your request was not approved
+
+Email Notifications:
+You'll also receive automatic email updates whenever your request status changes. Make sure to check your inbox (and spam folder) for updates from CSFD.`,
     type: "feature",
   },
 ];
+
+// Announcement Modal Component
+function AnnouncementModal({
+  open,
+  onOpenChange,
+  announcement,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  announcement: (typeof announcements)[0] | null;
+}) {
+  if (!announcement) return null;
+
+  const typeStyles = {
+    announcement: { bg: "bg-blue-100", text: "text-blue-700", label: "Announcement" },
+    advisory: { bg: "bg-amber-100", text: "text-amber-700", label: "Advisory" },
+    feature: { bg: "bg-green-100", text: "text-green-700", label: "New Feature" },
+  };
+
+  const style = typeStyles[announcement.type as keyof typeof typeStyles];
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center gap-2 mb-2">
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${style.bg} ${style.text}`}>
+              {style.label}
+            </span>
+          </div>
+          <DialogTitle className="text-xl md:text-2xl font-bold" style={{ color: COLORS.primary }}>
+            {announcement.title}
+          </DialogTitle>
+          <DialogDescription className="flex items-center gap-2 text-muted-foreground">
+            <Calendar className="w-4 h-4" />
+            {announcement.date}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-4">
+          <div className="prose prose-sm max-w-none">
+            {announcement.content.split('\n\n').map((paragraph, index) => {
+              // Check if it's a list
+              if (paragraph.includes('•')) {
+                const lines = paragraph.split('\n');
+                const title = lines[0];
+                const items = lines.slice(1);
+                return (
+                  <div key={index} className="mb-4">
+                    {title && !title.startsWith('•') && (
+                      <p className="font-semibold mb-2" style={{ color: COLORS.primary }}>{title}</p>
+                    )}
+                    <ul className="list-disc list-inside space-y-1 text-gray-600">
+                      {items.map((item, i) => (
+                        <li key={i}>{item.replace('• ', '')}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              }
+              // Check if it's numbered
+              if (/^\d+\./.test(paragraph)) {
+                const lines = paragraph.split('\n');
+                return (
+                  <ol key={index} className="list-decimal list-inside space-y-1 text-gray-600 mb-4">
+                    {lines.map((line, i) => (
+                      <li key={i}>{line.replace(/^\d+\.\s*/, '')}</li>
+                    ))}
+                  </ol>
+                );
+              }
+              return (
+                <p key={index} className="text-gray-600 mb-4 whitespace-pre-line">
+                  {paragraph}
+                </p>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Close
+          </Button>
+          <Link href="/services/gmc">
+            <Button
+              className="bg-gradient-to-r from-[#ffc400] to-[#ff9500] text-[#111c4e] font-bold"
+            >
+              Request a Certificate
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // Animated counter component
 function AnimatedCounter({ 
