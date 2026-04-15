@@ -427,6 +427,14 @@ function AnimatedSection({
 }
 
 export default function HomePage() {
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<(typeof announcements)[0] | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleAnnouncementClick = (announcement: (typeof announcements)[0]) => {
+    setSelectedAnnouncement(announcement);
+    setModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <PublicNavbar />
@@ -952,6 +960,7 @@ export default function HomePage() {
                 }}
                 whileHover={{ y: -5 }}
                 className="group cursor-pointer"
+                onClick={() => handleAnnouncementClick(item)}
               >
                 <Card className="relative h-full bg-card border-border hover:border-[#ffc400]/50 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
                   {/* Type badge */}
@@ -1071,6 +1080,13 @@ export default function HomePage() {
           </motion.div>
         </div>
       </AnimatedSection>
+
+      {/* Announcement Modal */}
+      <AnnouncementModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        announcement={selectedAnnouncement}
+      />
 
       <PublicFooter />
     </div>

@@ -1257,6 +1257,7 @@ export function getStatusUpdateTemplate(data: {
   status: string;
   remarks?: string;
   trackingToken?: string;
+  processorName?: string;
 }): string {
   // Route to specific template based on status
   switch (data.status) {
@@ -1266,6 +1267,7 @@ export function getStatusUpdateTemplate(data: {
         requestType: data.requestType,
         requestorName: data.requestorName,
         trackingToken: data.trackingToken,
+        processorName: data.processorName,
       });
     case 'READY_FOR_PICKUP':
       return getReadyForPickupEmailTemplate({
@@ -1273,6 +1275,7 @@ export function getStatusUpdateTemplate(data: {
         requestType: data.requestType,
         requestorName: data.requestorName,
         trackingToken: data.trackingToken,
+        processorName: data.processorName,
       });
     case 'ISSUED':
       return getIssuedEmailTemplate({
@@ -1280,6 +1283,7 @@ export function getStatusUpdateTemplate(data: {
         requestType: data.requestType,
         requestorName: data.requestorName,
         trackingToken: data.trackingToken,
+        processorName: data.processorName,
       });
     case 'HOLD':
       return getHoldEmailTemplate({

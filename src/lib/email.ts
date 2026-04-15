@@ -162,6 +162,7 @@ export async function sendStatusUpdateEmail(
     status: string;
     remarks?: string;
     trackingToken?: string;
+    processorName?: string;
   }
 ): Promise<{ success: boolean; error?: string }> {
   const requestTypeName = REQUEST_TYPE_NAMES[data.requestType] || data.requestType;
@@ -170,6 +171,7 @@ export async function sendStatusUpdateEmail(
   const templateData = {
     ...data,
     trackingToken: data.trackingToken || '',
+    processorName: data.processorName,
   };
 
   // Generate appropriate subject based on status

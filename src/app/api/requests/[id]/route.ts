@@ -82,6 +82,7 @@ export async function PATCH(
     
     updateData.processedBy = session.user.id;
     updateData.processedAt = new Date();
+    updateData.processorName = session.user.name || "Unknown";
 
     // If issuing, set certificate dates and URL
     if (status === "ISSUED") {
@@ -128,6 +129,7 @@ export async function PATCH(
         status: string;
         remarks?: string;
         trackingToken?: string;
+        processorName?: string;
       } = {
         controlNumber: currentRequest.controlNumber,
         requestType: requestTypeName,
@@ -135,6 +137,7 @@ export async function PATCH(
         status: status,
         remarks: remarks || currentRequest.remarks || undefined,
         trackingToken: currentRequest.trackingToken,
+        processorName: session.user.name || undefined,
       };
 
       // Send email in background (don't block the response)
