@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+// No session needed for public navbar
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -17,15 +17,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Home,
   Menu,
   X,
   ChevronDown,
-  LogOut,
-  User,
-  LayoutDashboard,
   FileText,
   Shirt,
   Users,
@@ -34,9 +30,7 @@ import {
   HelpCircle,
   Info,
   Phone,
-  Bell,
 } from "lucide-react";
-import { NotificationBell } from "@/components/notifications/notification-bell";
 
 // Color scheme
 const COLORS = {
@@ -62,7 +56,6 @@ const serviceItems = [
 ];
 
 export function PublicNavbar() {
-  const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -77,18 +70,6 @@ export function PublicNavbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  const getDashboardLink = () => {
-    if (!session?.user?.role) return "/auth/login";
-    switch (session.user.role) {
-      case "SUPER_ADMIN":
-        return "/dashboard/super-admin";
-      case "ADMIN":
-        return "/dashboard/admin";
-      default:
-        return "/dashboard/staff";
-    }
-  };
 
   const isActiveLink = (path: string) => {
     return pathname === path;
@@ -236,66 +217,7 @@ export function PublicNavbar() {
                 <ThemeToggle />
               </div>
 
-              {/* Notification Bell - only show when logged in */}
-              {status === "authenticated" && session?.user && (
-                <div className="ml-1">
-                  <NotificationBell variant="navbar" />
-                </div>
-              )}
-
-              {/* Auth Button - Only show User Menu when authenticated, NO login button for public users */}
-              {status === "authenticated" && session?.user && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors">
-                      <Avatar className="h-8 w-8 border-2 border-white/20">
-                        <AvatarImage src={session.user.image || undefined} />
-                        <AvatarFallback className="bg-gradient-to-br from-[#ffc400] to-[#ff8c00] text-[#111c4e] font-bold text-sm">
-                          {session.user.name?.charAt(0)?.toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="hidden xl:block">{session.user.name}</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-56 bg-[#111c4e]/95 backdrop-blur-lg border-white/10 text-white"
-                  >
-                    <DropdownMenuLabel>
-                      <div className="flex flex-col">
-                        <span className="font-medium">{session.user.name}</span>
-                        <span className="text-xs text-white/50 capitalize">
-                          {session.user.role?.replace("_", " ").toLowerCase()}
-                        </span>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuItem
-                      className="focus:bg-white/10 focus:text-white cursor-pointer"
-                      onClick={() => router.push(getDashboardLink())}
-                    >
-                      <LayoutDashboard className="h-4 w-4 mr-2" />
-                      Dashboard
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="focus:bg-white/10 focus:text-white cursor-pointer"
-                      onClick={() => router.push("/dashboard/profile")}
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuItem
-                      className="focus:bg-red-500/20 focus:text-red-400 cursor-pointer text-red-400"
-                      onClick={() => signOut({ callbackUrl: "/" })}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+              {/* NO login button or user menu for public - staff access via /login URL */}
             </nav>
 
             {/* Mobile Menu Button */}
@@ -351,26 +273,6 @@ export function PublicNavbar() {
 
         {/* Menu Content */}
         <div className="relative p-4 overflow-y-auto h-[calc(100%-80px)]">
-          {/* User Info if logged in */}
-          {status === "authenticated" && session?.user && (
-            <div className="mb-6 p-3 rounded-lg bg-white/5 border border-white/10">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 border-2 border-[#ffc400]/50">
-                  <AvatarImage src={session.user.image || undefined} />
-                  <AvatarFallback className="bg-gradient-to-br from-[#ffc400] to-[#ff8c00] text-[#111c4e] font-bold">
-                    {session.user.name?.charAt(0)?.toUpperCase() || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium text-white">{session.user.name}</p>
-                  <p className="text-xs text-white/50 capitalize">
-                    {session.user.role?.replace("_", " ").toLowerCase()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Navigation Links */}
           <nav className="space-y-1">
             {menuItems.map((item) => {
@@ -424,39 +326,6 @@ export function PublicNavbar() {
               })}
             </div>
           </div>
-
-          {/* Auth Buttons */}
-          {status === "authenticated" && session?.user ? (
-            <div className="mt-6 pt-6 border-t border-white/10">
-              <div className="space-y-2">
-                {/* Notifications in Mobile Menu */}
-                <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-white/5 border border-white/10 mb-3">
-                  <div className="flex items-center gap-3">
-                    <Bell className="h-5 w-5 text-[#ffc400]" />
-                    <span className="text-white">Notifications</span>
-                  </div>
-                  <NotificationBell variant="navbar" />
-                </div>
-                <button
-                  onClick={() => handleNavigate(getDashboardLink())}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left font-medium text-white bg-gradient-to-r from-[#ffc400]/20 to-[#ff8c00]/20 hover:from-[#ffc400]/30 hover:to-[#ff8c00]/30 transition-colors"
-                >
-                  <LayoutDashboard className="h-5 w-5 text-[#ffc400]" />
-                  <span>Dashboard</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    signOut({ callbackUrl: "/" });
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left font-medium text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span>Logout</span>
-                </button>
-              </div>
-            </div>
-          ) : null}
 
         </div>
       </div>
