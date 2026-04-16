@@ -243,8 +243,8 @@ export function PublicNavbar() {
                 </div>
               )}
 
-              {/* Auth Button - Show Login when not authenticated, User Menu when authenticated */}
-              {status === "authenticated" && session?.user ? (
+              {/* Auth Button - Only show User Menu when authenticated, NO login button for public users */}
+              {status === "authenticated" && session?.user && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-white hover:bg-white/10 transition-colors">
@@ -295,13 +295,6 @@ export function PublicNavbar() {
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              ) : (
-                <Button
-                  onClick={() => router.push("/login")}
-                  className="ml-2 bg-gradient-to-r from-[#ffc400] to-[#ff9500] text-[#111c4e] font-bold hover:from-[#ffc400] hover:to-[#ffaa00] transition-all"
-                >
-                  Login
-                </Button>
               )}
             </nav>
 
@@ -463,16 +456,8 @@ export function PublicNavbar() {
                 </button>
               </div>
             </div>
-          ) : (
-            <div className="mt-6 pt-6 border-t border-white/10">
-              <Button
-                onClick={() => handleNavigate("/login")}
-                className="w-full bg-gradient-to-r from-[#ffc400] to-[#ff9500] text-[#111c4e] font-bold hover:from-[#ffc400] hover:to-[#ffaa00] transition-all"
-              >
-                Login
-              </Button>
-            </div>
-          )}
+          ) : null}
+
         </div>
       </div>
 

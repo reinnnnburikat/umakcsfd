@@ -1,171 +1,277 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, Suspense } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useTheme } from "next-themes";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
-import { Sun, Moon, User, Lock, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { AlertCircle, Loader2, Shield, Sun, Moon } from "lucide-react";
 
-export default function LoginPage() {
+function LoginFormContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const { theme, setTheme } = useTheme();
+  
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
-  const router = useRouter();
-  const { theme, setTheme } = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
-      if (result.success) {
-        toast.success("Login successful!");
-        router.push("/dashboard");
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError("Invalid email or password. Please try again.");
       } else {
-        toast.error(result.error || "Invalid credentials");
+        // Get session to determine redirect
+        const response = await fetch("/api/auth/session");
+        const session = await response.json();
+
+        if (session?.user) {
+          switch (session.user.role) {
+            case "SUPER_ADMIN":
+              router.push("/dashboard/super-admin");
+              break;
+            case "ADMIN":
+              router.push("/dashboard/admin");
+              break;
+            default:
+              router.push("/dashboard/staff");
+          }
+        } else {
+          router.push(callbackUrl);
+        }
       }
-    } catch (error) {
-      toast.error("An error occurred. Please try again.");
+    } catch (err) {
+      setError("An error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10" />
-        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
-        <div className="relative z-10 flex flex-col justify-center items-center p-12 text-white">
-          <div className="w-24 h-24 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-8">
-            <span className="text-4xl font-bold">CSFD</span>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full max-w-md"
+    >
+      {/* Logo */}
+      <div className="flex justify-center mb-8">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Image
+              src="/logos/UMAK LOGO.png"
+              alt="UMak Logo"
+              width={60}
+              height={60}
+              className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-[#ffc400]/30"
+            />
           </div>
-          <h1 className="text-4xl font-bold text-center mb-4">
-            Welcome back, Heron!
-          </h1>
-          <p className="text-white/80 text-center max-w-md text-lg">
-            University of Makati. University of Character.
-          </p>
-          <div className="mt-12 flex items-center gap-4 text-white/60 text-sm">
-            <span>iCSFD+ Digital Management System</span>
+          <div className="relative">
+            <Image
+              src="/logos/CSFD LOGO.png"
+              alt="CSFD Logo"
+              width={60}
+              height={60}
+              className="w-14 h-14 md:w-16 md:h-16 rounded-full object-cover border-2 border-[#ffc400]/30"
+            />
           </div>
         </div>
       </div>
 
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+          Staff Portal
+        </h1>
+        <p className="text-white/60 text-sm">
+          Authorized personnel only
+        </p>
+      </div>
+
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 p-4 rounded-lg flex items-center gap-2 bg-red-500/20 text-red-200 border border-red-500/30"
+        >
+          <AlertCircle className="h-4 w-4" />
+          <span className="text-sm">{error}</span>
+        </motion.div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm text-white/70 mb-2">Email Address</label>
+          <Input
+            type="email"
+            placeholder="Enter your email"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-[#ffc400] focus:ring-1 focus:ring-[#ffc400] transition-all"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm text-white/70 mb-2">Password</label>
+          <Input
+            type="password"
+            placeholder="Enter your password"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-[#ffc400] focus:ring-1 focus:ring-[#ffc400] transition-all"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full py-3 rounded-lg font-bold text-[#111c4e] bg-[#ffc400] hover:bg-[#ffc400]/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Signing in...
+            </>
+          ) : (
+            <>
+              <Shield className="h-5 w-5" />
+              Sign In
+            </>
+          )}
+        </Button>
+      </form>
+
+      {/* Security Notice */}
+      <div className="mt-8 p-4 rounded-lg bg-white/5 border border-white/10">
+        <div className="flex items-start gap-3">
+          <Shield className="w-5 h-5 text-[#ffc400] flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-white/80 text-sm font-medium">Security Notice</p>
+            <p className="text-white/50 text-xs mt-1">
+              This portal is restricted to authorized CSFD personnel only. All login attempts are monitored and logged.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Back to home link */}
+      <div className="mt-6 text-center">
+        <Link
+          href="/"
+          className="text-sm text-white/50 hover:text-white transition-colors"
+        >
+          ← Back to Home
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
+
+function LoginSkeleton() {
+  return (
+    <div className="w-full max-w-md">
+      <div className="flex justify-center mb-8 gap-4">
+        <div className="w-16 h-16 bg-white/10 rounded-full animate-pulse" />
+        <div className="w-16 h-16 bg-white/10 rounded-full animate-pulse" />
+      </div>
+      <div className="h-8 w-32 bg-white/10 rounded mx-auto mb-4 animate-pulse" />
+      <div className="h-4 w-40 bg-white/10 rounded mx-auto mb-8 animate-pulse" />
+      <div className="space-y-4">
+        <div className="h-12 bg-white/10 rounded animate-pulse" />
+        <div className="h-12 bg-white/10 rounded animate-pulse" />
+        <div className="h-12 bg-[#ffc400]/20 rounded animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left Side - Branding */}
+      <div
+        className="hidden lg:flex lg:w-1/2 relative items-center justify-center"
+        style={{
+          background: "linear-gradient(135deg, #111c4e 0%, #0a1229 100%)",
+        }}
+      >
+        {/* Decorative elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-1/4 -right-1/4 w-96 h-96 bg-[#ffc400]/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-1/4 -left-1/4 w-96 h-96 bg-[#ffc400]/5 rounded-full blur-3xl" />
+          <div
+            className="absolute inset-0 opacity-5"
+            style={{
+              backgroundImage: "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
+              backgroundSize: "32px 32px",
+            }}
+          />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 text-center px-12">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
+              iCSFD<span className="text-[#ffc400]">+</span>
+            </h1>
+            <p className="text-xl text-white/60 mb-8">
+              Integrated CSFD Digital Management System
+            </p>
+            <p className="text-white/40 text-sm">
+              University of Makati - Center for Student Formation and Development
+            </p>
+          </motion.div>
+        </div>
+      </div>
+
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex flex-col justify-center items-center p-8 bg-background relative">
+      <div
+        className="flex-1 flex items-center justify-center p-8 relative"
+        style={{
+          background: "linear-gradient(135deg, #0a1229 0%, #111c4e 100%)",
+        }}
+      >
         {/* Theme Toggle */}
         <div className="absolute top-4 right-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="text-white/70 hover:text-white hover:bg-white/10"
           >
             <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
           </Button>
         </div>
 
-        <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 text-white font-bold">
-              CSFD
-            </div>
-            <div className="text-center">
-              <div className="font-bold text-xl">iCSFD+</div>
-              <div className="text-xs text-muted-foreground">UMak Student Services</div>
-            </div>
-          </div>
-
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-2xl font-bold">LOGIN</CardTitle>
-              <CardDescription>
-                Enter your credentials to access your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="email@umak.edu.ph"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-end">
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
-
-              {/* Demo Credentials Info */}
-              <div className="mt-6 p-4 bg-muted rounded-lg">
-                <p className="text-sm font-medium mb-2">Demo Credentials:</p>
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p><strong>Super Admin:</strong> superadmin@umak.edu.ph / superadmin123</p>
-                  <p><strong>Admin:</strong> admin@umak.edu.ph / admin123</p>
-                  <p><strong>Staff:</strong> staff@umak.edu.ph / staff123</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <p className="text-center text-sm text-muted-foreground mt-6">
-            Don&apos;t need to login?{" "}
-            <Link href="/" className="text-primary hover:underline">
-              Go back to home
-            </Link>
-          </p>
-        </div>
+        <Suspense fallback={<LoginSkeleton />}>
+          <LoginFormContent />
+        </Suspense>
       </div>
     </div>
   );
