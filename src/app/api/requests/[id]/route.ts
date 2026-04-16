@@ -1,11 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { RequestStatus } from "@prisma/client";
+import { RequestStatus, OffenseCategory } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { addMonths } from "@/lib/utils";
 import { sendStatusUpdateEmail, getRequestTypeDisplayName } from "@/lib/email";
 import { notifyRequestStatusUpdate, notifyUsersByRole } from "@/lib/notifications";
+
+// Color coding configuration based on offense category and count
+const offenseColorConfig = {
+  MINOR: {
+    colors: ["#ffc400", "#ff9500", "#dc2626", "#7c3aed", "#ec4899"],
+    becomesMajorAt: 3,
+  },
+  MAJOR: {
+    colors: ["#dc2626", "#7c3aed", "#be123c", "#6b21a8", "#1e293b"],
+    becomesMajorAt: 1,
+  },
+  LATE_FACULTY_EVALUATION: {
+    colors: ["#ff9500", "#dc2626", "#7c3aed", "#6366f1", "#475569"],
+    becomesMajorAt: 2,
+  },
+  LATE_ACCESS_ROG: {
+    colors: ["#ff9500", "#dc2626", "#7c3aed", "#6366f1", "#475569"],
+    becomesMajorAt: 2,
+  },
+  LATE_PAYMENT: {
+    colors: ["#ff9500", "#dc2626", "#7c3aed", "#6366f1", "#475569"],
+    becomesMajorAt: 2,
+  },
+  OTHER: {
+    colors: ["#6b7280", "#6b7280", "#6b7280", "#6b7280", "#6b7280"],
+    becomesMajorAt: 999,
+  },
+};
+
+function getOffenseColor(category: OffenseCategory, count: number): string {
+  const config = offenseColorConfig[category];
+  const index = Math.min(count - 1, config.colors.length - 1);
+  return config.colors[Math.max(0, index)];
+}
 
 // GET - Get a single request
 export async function GET(
@@ -28,7 +62,30 @@ export async function GET(
       return NextResponse.json({ error: "Request not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ data: req });
+    // Fetch disciplinary record for the student
+    const disciplinaryRecord = await db.disciplinaryRecord.findUnique({
+      where: { studentNumber: req.requestorStudentNo },
+    });
+
+    // Add color coding to disciplinary record
+    let disciplinaryWithColors = null;
+    if (disciplinaryRecord) {
+      const colors: Record<string, string> = {};
+      if (disciplinaryRecord.minorCount > 0) colors.MINOR = getOffenseColor(OffenseCategory.MINOR, disciplinaryRecord.minorCount);
+      if (disciplinaryRecord.majorCount > 0) colors.MAJOR = getOffenseColor(OffenseCategory.MAJOR, disciplinaryRecord.majorCount);
+      if (disciplinaryRecord.lateFacultyCount > 0) colors.LATE_FACULTY_EVALUATION = getOffenseColor(OffenseCategory.LATE_FACULTY_EVALUATION, disciplinaryRecord.lateFacultyCount);
+      if (disciplinaryRecord.lateRogCount > 0) colors.LATE_ACCESS_ROG = getOffenseColor(OffenseCategory.LATE_ACCESS_ROG, disciplinaryRecord.lateRogCount);
+      if (disciplinaryRecord.latePaymentCount > 0) colors.LATE_PAYMENT = getOffenseColor(OffenseCategory.LATE_PAYMENT, disciplinaryRecord.latePaymentCount);
+      
+      disciplinaryWithColors = { ...disciplinaryRecord, colors };
+    }
+
+    return NextResponse.json({ 
+      data: {
+        ...req,
+        disciplinaryRecord: disciplinaryWithColors,
+      }
+    });
   } catch (error) {
     console.error("Error fetching request:", error);
     return NextResponse.json(

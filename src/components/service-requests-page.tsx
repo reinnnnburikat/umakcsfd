@@ -75,6 +75,8 @@ import {
   Pause,
   Play,
   Loader2,
+  AlertTriangle,
+  Award,
 } from "lucide-react";
 import { format, isWithinInterval } from "date-fns";
 import { DateRange } from "react-day-picker";
@@ -84,6 +86,24 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 // Types
+interface DisciplinaryRecord {
+  id: string;
+  studentNumber: string;
+  studentName: string;
+  college: string | null;
+  course: string | null;
+  yearLevel: string | null;
+  minorCount: number;
+  majorCount: number;
+  lateFacultyCount: number;
+  lateRogCount: number;
+  latePaymentCount: number;
+  otherCount: number;
+  hasActiveOffenses: boolean;
+  isEndorsed: boolean;
+  colors: Record<string, string>;
+}
+
 interface Request {
   id: string;
   controlNumber: string;
@@ -122,6 +142,7 @@ interface Request {
     name: string;
     email: string;
   };
+  disciplinaryRecord?: DisciplinaryRecord | null;
 }
 
 interface ActivityLog {
@@ -192,6 +213,47 @@ const requestTypeConfig = {
   CDC: { label: "Cross-Dressing Clearance", color: "#10b981", shortLabel: "CDC" },
   CAC: { label: "Child Admission Clearance", color: "#6366f1", shortLabel: "CAC" },
 };
+
+// Offense indicator component for color coding
+function OffenseIndicator({ disciplinary }: { disciplinary: DisciplinaryRecord | null | undefined }) {
+  if (!disciplinary || !disciplinary.hasActiveOffenses) return null;
+
+  const offenses = [];
+  if (disciplinary.minorCount > 0) {
+    offenses.push({ category: "Minor", count: disciplinary.minorCount, color: disciplinary.colors.MINOR });
+  }
+  if (disciplinary.majorCount > 0) {
+    offenses.push({ category: "Major", count: disciplinary.majorCount, color: disciplinary.colors.MAJOR });
+  }
+  if (disciplinary.lateFacultyCount > 0) {
+    offenses.push({ category: "Late Fac", count: disciplinary.lateFacultyCount, color: disciplinary.colors.LATE_FACULTY_EVALUATION });
+  }
+  if (disciplinary.lateRogCount > 0) {
+    offenses.push({ category: "Late ROG", count: disciplinary.lateRogCount, color: disciplinary.colors.LATE_ACCESS_ROG });
+  }
+  if (disciplinary.latePaymentCount > 0) {
+    offenses.push({ category: "Late Pay", count: disciplinary.latePaymentCount, color: disciplinary.colors.LATE_PAYMENT });
+  }
+
+  if (offenses.length === 0) return null;
+
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {offenses.map((offense, i) => (
+        <span
+          key={i}
+          className="px-2 py-0.5 rounded text-xs font-medium"
+          style={{
+            backgroundColor: offense.color,
+            color: offense.color === "#ffc400" || offense.color === "#ff9500" ? "#111c4e" : "white",
+          }}
+        >
+          {offense.category}: {offense.count}
+        </span>
+      ))}
+    </div>
+  );
+}
 
 // Status Badge Component
 function StatusBadge({ status }: { status: string }) {
@@ -277,6 +339,20 @@ function RequestDetailModal({ request, open, onOpenChange, onUpdate, requestType
               <DialogDescription className="font-mono" style={{ color: "#ffc400" }}>
                 {request.controlNumber}
               </DialogDescription>
+              {/* Disciplinary Status Warning */}
+              {request.disciplinaryRecord?.hasActiveOffenses && (
+                <div className="mt-2 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  <span className="text-sm text-red-500 font-medium">
+                    Student has active offense(s)
+                  </span>
+                  {request.disciplinaryRecord.isEndorsed && (
+                    <span className="px-2 py-0.5 rounded text-xs bg-purple-500 text-white">
+                      Endorsed
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <Badge
               variant="outline"
@@ -346,6 +422,66 @@ function RequestDetailModal({ request, open, onOpenChange, onUpdate, requestType
               )}
             </div>
           </div>
+
+          {/* Disciplinary Record Section */}
+          {request.disciplinaryRecord && (
+            <div className="col-span-1 md:col-span-2 space-y-4">
+              <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Disciplinary Record
+              </h4>
+              <div className={`p-4 rounded-lg border ${request.disciplinaryRecord.hasActiveOffenses ? 'border-red-200 bg-red-50 dark:bg-red-900/20' : 'border-green-200 bg-green-50 dark:bg-green-900/20'}`}>
+                {request.disciplinaryRecord.hasActiveOffenses ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-red-700 dark:text-red-400">Active Offenses Found</span>
+                      {request.disciplinaryRecord.isEndorsed && (
+                        <span className="px-2 py-1 rounded text-xs bg-purple-500 text-white flex items-center gap-1">
+                          <Award className="h-3 w-3" />
+                          Endorsed for Service
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {request.disciplinaryRecord.minorCount > 0 && (
+                        <div className="p-2 rounded" style={{ backgroundColor: request.disciplinaryRecord.colors.MINOR + '20' }}>
+                          <span className="text-xs font-medium" style={{ color: request.disciplinaryRecord.colors.MINOR }}>Minor: {request.disciplinaryRecord.minorCount}</span>
+                        </div>
+                      )}
+                      {request.disciplinaryRecord.majorCount > 0 && (
+                        <div className="p-2 rounded" style={{ backgroundColor: request.disciplinaryRecord.colors.MAJOR + '20' }}>
+                          <span className="text-xs font-medium text-white" style={{ color: request.disciplinaryRecord.colors.MAJOR }}>Major: {request.disciplinaryRecord.majorCount}</span>
+                        </div>
+                      )}
+                      {request.disciplinaryRecord.lateFacultyCount > 0 && (
+                        <div className="p-2 rounded" style={{ backgroundColor: request.disciplinaryRecord.colors.LATE_FACULTY_EVALUATION + '20' }}>
+                          <span className="text-xs font-medium" style={{ color: request.disciplinaryRecord.colors.LATE_FACULTY_EVALUATION }}>Late Faculty Eval: {request.disciplinaryRecord.lateFacultyCount}</span>
+                        </div>
+                      )}
+                      {request.disciplinaryRecord.lateRogCount > 0 && (
+                        <div className="p-2 rounded" style={{ backgroundColor: request.disciplinaryRecord.colors.LATE_ACCESS_ROG + '20' }}>
+                          <span className="text-xs font-medium" style={{ color: request.disciplinaryRecord.colors.LATE_ACCESS_ROG }}>Late ROG: {request.disciplinaryRecord.lateRogCount}</span>
+                        </div>
+                      )}
+                      {request.disciplinaryRecord.latePaymentCount > 0 && (
+                        <div className="p-2 rounded" style={{ backgroundColor: request.disciplinaryRecord.colors.LATE_PAYMENT + '20' }}>
+                          <span className="text-xs font-medium" style={{ color: request.disciplinaryRecord.colors.LATE_PAYMENT }}>Late Payment: {request.disciplinaryRecord.latePaymentCount}</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      Please verify with the disciplinary records before issuing the certificate.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <CheckCircle className="h-4 w-4" />
+                    <span className="font-medium">No Active Offenses - Clear Record</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Request Details */}
           <div className="space-y-4">
@@ -928,7 +1064,9 @@ export default function ServiceRequestsPage({ requestType }: ServiceRequestsPage
                     </TableHeader>
                     <TableBody>
                       {sortedRequests.map((request) => (
-                        <TableRow key={request.id} className="cursor-pointer hover:bg-muted/50"
+                        <TableRow 
+                          key={request.id} 
+                          className={`cursor-pointer hover:bg-muted/50 ${request.disciplinaryRecord?.hasActiveOffenses ? 'bg-red-50 dark:bg-red-900/10' : ''}`}
                           onClick={() => {
                             setSelectedRequest(request);
                             setModalOpen(true);
@@ -937,11 +1075,17 @@ export default function ServiceRequestsPage({ requestType }: ServiceRequestsPage
                           <TableCell className="font-mono text-sm">{request.controlNumber}</TableCell>
                           <TableCell>
                             <div>
-                              <p className="font-medium">
-                                {request.requestorFirstName} {request.requestorLastName}
-                                {request.requestorExtensionName && ` ${request.requestorExtensionName}`}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">
+                                  {request.requestorFirstName} {request.requestorLastName}
+                                  {request.requestorExtensionName && ` ${request.requestorExtensionName}`}
+                                </p>
+                                {request.disciplinaryRecord?.hasActiveOffenses && (
+                                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                                )}
+                              </div>
                               <p className="text-xs text-muted-foreground">{request.requestorStudentNo}</p>
+                              <OffenseIndicator disciplinary={request.disciplinaryRecord} />
                             </div>
                           </TableCell>
                           <TableCell className="max-w-[200px] truncate">{request.purpose}</TableCell>

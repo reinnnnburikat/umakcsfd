@@ -1,11 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { RequestStatus, RequestType } from "@prisma/client";
+import { RequestStatus, RequestType, OffenseCategory } from "@prisma/client";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateControlNumber, generateTrackingToken, generateQRCode, addMonths } from "@/lib/utils";
 import { sendRequestConfirmationEmail, getRequestTypeDisplayName } from "@/lib/email";
 import { notifyAdminsNewRequest } from "@/lib/notifications";
+
+// Color coding configuration based on offense category and count
+export const offenseColorConfig = {
+  MINOR: {
+    colors: ["#ffc400", "#ff9500", "#dc2626", "#7c3aed", "#ec4899"],
+    labels: ["1st Offense", "2nd Offense", "3rd Offense (Major)", "4th Offense", "5th Offense"],
+    becomesMajorAt: 3,
+  },
+  MAJOR: {
+    colors: ["#dc2626", "#7c3aed", "#be123c", "#6b21a8", "#1e293b"],
+    labels: ["1st Offense", "2nd Offense", "3rd Offense", "4th Offense", "5th Offense"],
+    becomesMajorAt: 1,
+  },
+  LATE_FACULTY_EVALUATION: {
+    colors: ["#ff9500", "#dc2626", "#7c3aed", "#6366f1", "#475569"],
+    labels: ["1st Offense", "2nd Offense (Major)", "3rd Offense", "4th Offense", "5th Offense"],
+    becomesMajorAt: 2,
+  },
+  LATE_ACCESS_ROG: {
+    colors: ["#ff9500", "#dc2626", "#7c3aed", "#6366f1", "#475569"],
+    labels: ["1st Offense", "2nd Offense (Major)", "3rd Offense", "4th Offense", "5th Offense"],
+    becomesMajorAt: 2,
+  },
+  LATE_PAYMENT: {
+    colors: ["#ff9500", "#dc2626", "#7c3aed", "#6366f1", "#475569"],
+    labels: ["1st Offense", "2nd Offense (Major)", "3rd Offense", "4th Offense", "5th Offense"],
+    becomesMajorAt: 2,
+  },
+  OTHER: {
+    colors: ["#6b7280", "#6b7280", "#6b7280", "#6b7280", "#6b7280"],
+    labels: ["1st Offense", "2nd Offense", "3rd Offense", "4th Offense", "5th Offense"],
+    becomesMajorAt: 999,
+  },
+};
+
+// Get color for offense based on category and count
+function getOffenseColor(category: OffenseCategory, count: number): string {
+  const config = offenseColorConfig[category];
+  const index = Math.min(count - 1, config.colors.length - 1);
+  return config.colors[Math.max(0, index)];
+}
 
 // GET - List all requests
 export async function GET(request: NextRequest) {
@@ -55,8 +96,35 @@ export async function GET(request: NextRequest) {
       db.request.count({ where }),
     ]);
 
+    // Fetch disciplinary records for all students in the requests
+    const studentNumbers = requests.map(r => r.requestorStudentNo);
+    const disciplinaryRecords = await db.disciplinaryRecord.findMany({
+      where: {
+        studentNumber: { in: studentNumbers },
+      },
+    });
+
+    // Create a map of student numbers to disciplinary records with color info
+    const disciplinaryMap = new Map<string, typeof disciplinaryRecords[0] & { colors: Record<string, string> }>();
+    disciplinaryRecords.forEach(record => {
+      const colors: Record<string, string> = {};
+      if (record.minorCount > 0) colors.MINOR = getOffenseColor(OffenseCategory.MINOR, record.minorCount);
+      if (record.majorCount > 0) colors.MAJOR = getOffenseColor(OffenseCategory.MAJOR, record.majorCount);
+      if (record.lateFacultyCount > 0) colors.LATE_FACULTY_EVALUATION = getOffenseColor(OffenseCategory.LATE_FACULTY_EVALUATION, record.lateFacultyCount);
+      if (record.lateRogCount > 0) colors.LATE_ACCESS_ROG = getOffenseColor(OffenseCategory.LATE_ACCESS_ROG, record.lateRogCount);
+      if (record.latePaymentCount > 0) colors.LATE_PAYMENT = getOffenseColor(OffenseCategory.LATE_PAYMENT, record.latePaymentCount);
+      
+      disciplinaryMap.set(record.studentNumber, { ...record, colors });
+    });
+
+    // Add disciplinary info to each request
+    const requestsWithDisciplinary = requests.map(request => ({
+      ...request,
+      disciplinaryRecord: disciplinaryMap.get(request.requestorStudentNo) || null,
+    }));
+
     return NextResponse.json({
-      data: requests,
+      data: requestsWithDisciplinary,
       pagination: {
         page,
         limit,
