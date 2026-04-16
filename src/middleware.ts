@@ -37,7 +37,7 @@ export default withAuth(
         const { pathname } = req.nextUrl;
         
         // Public paths that don't require authentication
-        const publicPaths = ["/", "/auth", "/track", "/verify", "/about", "/faq", "/services"];
+        const publicPaths = ["/", "/auth", "/login", "/track", "/verify", "/about", "/faq", "/faqs", "/services", "/contact"];
         if (publicPaths.some((path) => pathname.startsWith(path))) {
           return true;
         }

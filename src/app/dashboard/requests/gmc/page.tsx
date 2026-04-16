@@ -1,3 +1,5 @@
+"use client";
+
 import ServiceRequestsPage from "@/components/service-requests-page";
 
 export default function GMCRequestsPage() {
